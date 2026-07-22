@@ -224,16 +224,68 @@ export function createApp(bindings = {}) {
             }
             if (!ok) throw new UnauthorizedError();
         }
+
         const nodes = await requireNodeStorage(services.nodes).list();
         const lines = nodes
             .filter((n) => n && n.enabled !== false && n.raw)
             .map((n) => String(n.raw).trim())
-            .filter(Boolean);
-        const body = lines.join('\n');
-        return c.text(body, 200, {
-            'Content-Type': 'text/plain; charset=utf-8',
+            .filter(Boolean)
+            // skip remote-source placeholders if any remain
+            .filter((raw) => !/^https?:\/\//i.test(raw));
+
+        if (!lines.length) {
+            throw new ServiceError('节点库为空：请先导入并启用至少一个节点', 404);
+        }
+
+        // format: clash (default) | base64 | raw/uri
+        // Clash clients expect YAML config, not plain vless:// lines.
+        const format = String(c.req.query('format') || c.req.query('target') || 'clash').toLowerCase();
+        const joined = lines.join('\n');
+
+        if (format === 'raw' || format === 'uri' || format === 'text') {
+            return c.text(joined, 200, {
+                'Content-Type': 'text/plain; charset=utf-8',
+                'Profile-Update-Interval': '12',
+                'Cache-Control': 'no-store'
+            });
+        }
+
+        if (format === 'base64' || format === 'b64' || format === 'v2ray') {
+            return c.text(encodeBase64(joined), 200, {
+                'Content-Type': 'text/plain; charset=utf-8',
+                'Profile-Update-Interval': '12',
+                'Cache-Control': 'no-store'
+            });
+        }
+
+        // Default: full Clash YAML so Mihomo/Clash Meta can import directly
+        const lang = resolveLanguage(c.get('lang') || c.req.query('lang'));
+        const ua = c.req.query('ua') || getRequestHeader(c.req, 'User-Agent') || DEFAULT_USER_AGENT;
+        const selectedRules = parseSelectedRules(c.req.query('selectedRules')) || 'balanced';
+        const customRules = parseJsonArray(c.req.query('customRules')) || [];
+        const groupByCountry = parseBooleanFlag(c.req.query('group_by_country'));
+        const includeAutoSelect = c.req.query('include_auto_select') !== 'false';
+
+        const builder = new ClashConfigBuilder(
+            joined,
+            selectedRules,
+            customRules,
+            undefined,
+            lang,
+            ua,
+            groupByCountry,
+            false,
+            undefined,
+            undefined,
+            includeAutoSelect
+        );
+        await builder.build();
+        const yamlText = builder.formatConfig();
+        return c.text(yamlText, 200, {
+            'Content-Type': 'text/yaml; charset=utf-8',
             'Profile-Update-Interval': '12',
-            'Cache-Control': 'no-store'
+            'Cache-Control': 'no-store',
+            'Content-Disposition': 'inline; filename="sublink.yaml"'
         });
     }
 
