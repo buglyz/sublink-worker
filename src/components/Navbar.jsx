@@ -10,8 +10,11 @@ const NAV = [
 
 export const Navbar = () => {
   return (
-    <header class="fixed top-0 left-0 right-0 z-50 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--background)_80%,transparent)] backdrop-blur supports-[backdrop-filter]:bg-[color-mix(in_srgb,var(--background)_60%,transparent)]">
-      <div class="flex h-16 items-center justify-between gap-3 px-4 sm:px-6 overflow-hidden">
+    <header
+      class="fixed top-0 left-0 right-0 z-[100] border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--background)_92%,transparent)] backdrop-blur supports-[backdrop-filter]:bg-[color-mix(in_srgb,var(--background)_78%,transparent)]"
+      x-data="{ mobileOpen: false }"
+    >
+      <div class="flex h-16 items-center justify-between gap-3 px-4 sm:px-6">
         <div class="flex min-w-0 items-center gap-3 sm:gap-6">
           <a href="/" class="flex shrink-0 items-center gap-2.5 font-semibold tracking-tight outline-none group">
             <span class="flex h-9 w-9 items-center justify-center rounded-[calc(var(--radius)-2px)] border border-[color-mix(in_srgb,var(--primary)_35%,var(--border))] bg-[var(--primary)] text-[var(--primary-foreground)] shadow-sm">
@@ -69,32 +72,63 @@ export const Navbar = () => {
           >
             <i class="fas text-[14px]" x-bind:class="darkMode ? 'fa-sun' : 'fa-moon'"></i>
           </button>
-          <div class="relative md:hidden" x-data="{ open: false }">
-            <button type="button" class="mm-btn mm-btn-ghost mm-btn-icon" x-on:click="open = !open" aria-label="菜单">
-              <i class="fas fa-bars text-sm"></i>
-            </button>
-            <div
-              x-show="open"
-              x-cloak
-              {...{ 'x-on:click.outside': 'open = false' }}
-              class="absolute right-0 top-11 w-44 mm-card p-1.5 shadow-md z-50"
-            >
-              {NAV.map((item) => (
-                <button
-                  type="button"
-                  class="mm-btn mm-btn-ghost w-full justify-start px-3 py-2 text-sm"
-                  data-page={item.id}
-                  x-on:click="setPage($el.dataset.page); open = false"
-                  x-bind:class={`page === '${item.id}' ? 'text-[var(--primary)]' : ''`}
-                >
-                  <i class={`fas ${item.icon} text-xs w-4`}></i>
-                  {item.label}
-                </button>
-              ))}
-            </div>
-          </div>
+          <button
+            type="button"
+            class="mm-btn mm-btn-ghost mm-btn-icon md:hidden"
+            x-on:click="mobileOpen = !mobileOpen"
+            aria-label="菜单"
+            x-bind:aria-expanded="mobileOpen"
+          >
+            <i class="fas text-sm" x-bind:class="mobileOpen ? 'fa-times' : 'fa-bars'"></i>
+          </button>
         </div>
       </div>
+
+      {/* Mobile drawer — full width under header, above page content */}
+      <div
+        class="md:hidden border-t border-[var(--border)] bg-[var(--background)] shadow-md"
+        x-show="mobileOpen"
+        x-cloak
+        x-transition:enter="transition ease-out duration-150"
+        x-transition:enter-start="opacity-0 -translate-y-1"
+        x-transition:enter-end="opacity-100 translate-y-0"
+        x-transition:leave="transition ease-in duration-100"
+        x-transition:leave-start="opacity-100"
+        x-transition:leave-end="opacity-0"
+      >
+        <nav class="px-3 py-2 space-y-1">
+          {NAV.map((item) => (
+            <button
+              type="button"
+              class="mm-btn mm-btn-ghost w-full justify-start px-3 py-2.5 text-sm"
+              data-page={item.id}
+              x-on:click="setPage($el.dataset.page); mobileOpen = false"
+              x-bind:class={`page === '${item.id}' ? 'mm-btn-secondary text-[var(--primary)]' : ''`}
+            >
+              <i class={`fas ${item.icon} text-xs w-5 opacity-80`}></i>
+              {item.label}
+            </button>
+          ))}
+          <a
+            href={DOCS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="mm-btn mm-btn-ghost w-full justify-start px-3 py-2.5 text-sm"
+            x-on:click="mobileOpen = false"
+          >
+            <i class="fas fa-book-open text-xs w-5 opacity-80"></i>
+            文档
+          </a>
+        </nav>
+      </div>
+
+      {/* Tap outside to close (dim layer below header) */}
+      <div
+        class="md:hidden fixed inset-0 top-16 z-[-1] bg-black/20"
+        x-show="mobileOpen"
+        x-cloak
+        x-on:click="mobileOpen = false"
+      ></div>
     </header>
   );
 };
