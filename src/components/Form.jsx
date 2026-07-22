@@ -456,8 +456,8 @@ export const Form = (props) => {
         <div class="space-y-4" x-show="generatedLinks" x-cloak>
           <div class="pixel-card mm-card" x-show="$store.auth.exportSubUrl">
             <div class="card-header border-b border-[var(--border)] pb-4">
-              <div class="card-title text-base">节点库订阅</div>
-              <div class="card-desc">主订阅链接（短路径 /sub/…）· 客户端持续更新启用节点</div>
+              <div class="card-title text-base">Clash 订阅链接</div>
+              <div class="card-desc">默认导出完整 Clash YAML（Mihomo / Clash Meta 可直接导入）</div>
             </div>
             <div class="card-content pt-4 space-y-2">
               <input
@@ -473,7 +473,7 @@ export const Form = (props) => {
                   class="mm-btn mm-btn-primary mm-btn-sm"
                   x-on:click={'const u = $store.auth.exportSubUrl; if (!u) return; navigator.clipboard.writeText(u).then(() => alert("已复制订阅链接")).catch(() => alert(u));'}
                 >
-                  复制订阅链接
+                  复制 Clash 订阅
                 </button>
                 <button
                   type="button"

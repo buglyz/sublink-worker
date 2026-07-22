@@ -531,7 +531,7 @@ export const NodeLibrary = (props) => {
             this.persistMessage('订阅链接尚未就绪');
             return;
           }
-          navigator.clipboard.writeText(url).then(() => this.persistMessage('已复制订阅链接')).catch(() => {
+          navigator.clipboard.writeText(url).then(() => this.persistMessage('已复制 Clash 订阅链接')).catch(() => {
             this.persistMessage(url);
           });
         },
