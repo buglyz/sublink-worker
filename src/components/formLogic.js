@@ -82,6 +82,7 @@ export const formLogicFn = (t) => {
             },
             selectedRules: [],
             selectedPredefinedRule: 'balanced',
+            selectedTemplate: '',
             subconverterCopied: false,
             groupByCountry: false,
             includeAutoSelect: true,
@@ -139,6 +140,7 @@ export const formLogicFn = (t) => {
                 this.configEditor = localStorage.getItem('configEditor') || '';
                 this.configType = localStorage.getItem('configType') || 'singbox';
                 this.customShortCode = localStorage.getItem('customShortCode') || '';
+                this.selectedTemplate = localStorage.getItem('selectedTemplate') || '';
                 const initialUrlParams = new URLSearchParams(window.location.search);
                 this.currentConfigId = initialUrlParams.get('configId') || '';
 
@@ -167,6 +169,7 @@ export const formLogicFn = (t) => {
                 this.$watch('externalController', val => localStorage.setItem('externalController', val));
                 this.$watch('externalUiDownloadUrl', val => localStorage.setItem('externalUiDownloadUrl', val));
                 this.$watch('customUA', val => localStorage.setItem('userAgent', val));
+                this.$watch('selectedTemplate', val => localStorage.setItem('selectedTemplate', val || ''));
                 this.$watch('configEditor', val => {
                     localStorage.setItem('configEditor', val);
                     this.resetConfigValidation();
@@ -191,6 +194,13 @@ export const formLogicFn = (t) => {
                 if (rules && rules[this.selectedPredefinedRule]) {
                     this.selectedRules = rules[this.selectedPredefinedRule];
                 }
+            },
+
+            templateLabel() {
+                if (!this.selectedTemplate) return '';
+                const list = window.RULE_TEMPLATES || [];
+                const found = list.find((t) => t.id === this.selectedTemplate);
+                return found ? found.label : this.selectedTemplate;
             },
 
             getSubconverterUrl() {
@@ -375,8 +385,12 @@ export const formLogicFn = (t) => {
                     const params = new URLSearchParams();
                     params.append('config', this.input);
                     params.append('ua', this.customUA);
-                    params.append('selectedRules', JSON.stringify(this.selectedRules));
-                    params.append('customRules', JSON.stringify(customRules));
+
+                    // Clash V3 template path only affects /clash; other formats keep selectedRules.
+                    if (!this.selectedTemplate) {
+                        params.append('selectedRules', JSON.stringify(this.selectedRules));
+                        params.append('customRules', JSON.stringify(customRules));
+                    }
 
                     if (this.groupByCountry) params.append('group_by_country', 'true');
                     if (!this.includeAutoSelect) params.append('include_auto_select', 'false');
@@ -392,11 +406,23 @@ export const formLogicFn = (t) => {
                     }
 
                     const queryString = params.toString();
+                    const clashParams = new URLSearchParams(params);
+                    if (this.selectedTemplate) {
+                        clashParams.set('template', this.selectedTemplate);
+                        clashParams.delete('selectedRules');
+                        clashParams.delete('customRules');
+                        clashParams.delete('group_by_country');
+                        clashParams.delete('include_auto_select');
+                        clashParams.delete('enable_clash_ui');
+                        clashParams.delete('external_controller');
+                        clashParams.delete('external_ui_download_url');
+                        clashParams.delete('configId');
+                    }
 
                     this.generatedLinks = {
                         xray: origin + '/xray?' + queryString,
                         singbox: origin + '/singbox?' + queryString,
-                        clash: origin + '/clash?' + queryString,
+                        clash: origin + '/clash?' + clashParams.toString(),
                         surge: origin + '/surge?' + queryString
                     };
 
@@ -589,6 +615,12 @@ export const formLogicFn = (t) => {
                     this.input = config;
                 }
 
+                // Extract Clash V3 template
+                const template = params.get('template') || params.get('rule_template');
+                if (template) {
+                    this.selectedTemplate = template;
+                }
+
                 // Extract selectedRules
                 const selectedRules = params.get('selectedRules');
                 if (selectedRules) {
@@ -646,7 +678,7 @@ export const formLogicFn = (t) => {
                 }
 
                 // Expand advanced options if any advanced settings are present
-                if (selectedRules || customRules || this.groupByCountry || this.enableClashUI ||
+                if (selectedRules || customRules || template || this.groupByCountry || this.enableClashUI ||
                     externalController || externalUiDownloadUrl || ua || configId) {
                     this.showAdvanced = true;
                 }

@@ -1,6 +1,7 @@
 /** @jsxRuntime automatic */
 /** @jsxImportSource hono/jsx */
 import { PREDEFINED_RULE_SETS, UNIFIED_RULES } from '../config/index.js';
+import { listTemplateDetails } from '../templates/index.js';
 import { CustomRules } from './CustomRules.jsx';
 import { TextareaWithActions } from './TextareaWithActions.jsx';
 import { ValidatedTextarea } from './ValidatedTextarea.jsx';
@@ -37,9 +38,19 @@ export const Form = (props) => {
     showFullLinks: t('showFullLinks')
   };
 
+  const templateOptions = listTemplateDetails();
+  const templateGroups = {
+    v3: templateOptions.filter((t) => t.source === 'miaomiaowu-v3'),
+    aethersailor: templateOptions.filter((t) => t.id.startsWith('Custom_Clash')),
+    acl4ssr: templateOptions.filter(
+      (t) => t.source === 'acl-ini' && !t.id.startsWith('Custom_Clash')
+    ),
+  };
+
   const scriptContent = `
     window.APP_TRANSLATIONS = ${JSON.stringify(translations)};
     window.PREDEFINED_RULE_SETS = ${JSON.stringify(PREDEFINED_RULE_SETS)};
+    window.RULE_TEMPLATES = ${JSON.stringify(templateOptions)};
     window.APP_LANG = ${JSON.stringify(lang || 'zh-CN')};
     if (typeof __name === 'undefined') { var __name = function(fn) { return fn; }; }
     (${formLogicFn.toString()})();
@@ -123,14 +134,47 @@ export const Form = (props) => {
   {/* Advanced Options Content */ }
   <div x-show="showAdvanced" {...{'x-transition:enter': 'transition ease-out duration-300', 'x-transition:enter-start': 'opacity-0 transform -translate-y-4', 'x-transition:enter-end': 'opacity-100 transform translate-y-0', 'x-transition:leave': 'transition ease-in duration-200', 'x-transition:leave-start': 'opacity-100 transform translate-y-0', 'x-transition:leave-end': 'opacity-0 transform -translate-y-4'}} class="space-y-6">
 
-    {/* Rule Selection */ }
+    {/* Clash V3 Rule Template (miaomiaowu) */}
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+          <i class="fas fa-layer-group text-gray-400"></i>
+          {t('clashTemplate')}
+        </h3>
+        <select
+          x-model="selectedTemplate"
+          class="w-full sm:w-auto max-w-full sm:min-w-[20rem] px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+        >
+          <option value="">{t('clashTemplateNone')}</option>
+          <optgroup label={t('clashTemplateGroupV3')}>
+            {templateGroups.v3.map((tpl) => (
+              <option value={tpl.id}>{tpl.label}</option>
+            ))}
+          </optgroup>
+          <optgroup label={t('clashTemplateGroupAethersailor')}>
+            {templateGroups.aethersailor.map((tpl) => (
+              <option value={tpl.id}>{tpl.label}</option>
+            ))}
+          </optgroup>
+          <optgroup label={t('clashTemplateGroupAcl4ssr')}>
+            {templateGroups.acl4ssr.map((tpl) => (
+              <option value={tpl.id}>{tpl.label}</option>
+            ))}
+          </optgroup>
+        </select>
+      </div>
+      <p class="text-sm text-gray-500 dark:text-gray-400">{t('clashTemplateHint')}</p>
+      <p class="text-sm text-primary-600 dark:text-primary-400 mt-2" x-show="selectedTemplate" x-text="templateLabel()"></p>
+    </div>
+
+    {/* Rule Selection */ }
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6" x-bind:class="selectedTemplate ? 'opacity-60' : ''">
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
           <i class="fas fa-filter text-gray-400"></i>
           {t('ruleSelection')}
         </h3>
-        <select x-model="selectedPredefinedRule" x-on:change="applyPredefinedRule()" class="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+        <select x-model="selectedPredefinedRule" x-on:change="applyPredefinedRule()" class="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent" x-bind:disabled="!!selectedTemplate">
         <option value="custom">{t('custom')}</option>
         <option value="minimal">{t('minimal')}</option>
         <option value="balanced">{t('balanced')}</option>
@@ -138,15 +182,18 @@ export const Form = (props) => {
       </select>
           </div>
 
+  <p class="text-sm text-amber-600 dark:text-amber-400 mb-3" x-show="selectedTemplate">{t('clashTemplateOverridesRules')}</p>
+
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
     {UNIFIED_RULES.map((rule) => (
       <label class="flex items-center p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors group">
         <input
           type="checkbox"
           value={rule.name}
-          x-model="selectedRules" 
+          x-model="selectedRules"
                     x-on:change="selectedPredefinedRule = 'custom'"
         class="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600"
+        x-bind:disabled="!!selectedTemplate"
                   />
         <span class="ml-3 text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
           {t(`outboundNames.${rule.name}`)}
