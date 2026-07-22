@@ -471,11 +471,7 @@ export const Form = (props) => {
                 <button
                   type="button"
                   class="mm-btn mm-btn-primary mm-btn-sm"
-                  x-on:click="
-                    const u = $store.auth.exportSubUrl;
-                    if (!u) return;
-                    navigator.clipboard.writeText(u).then(() => alert('已复制订阅链接')).catch(() => alert(u));
-                  "
+                  x-on:click={'const u = $store.auth.exportSubUrl; if (!u) return; navigator.clipboard.writeText(u).then(() => alert("已复制订阅链接")).catch(() => alert(u));'}
                 >
                   复制订阅链接
                 </button>
