@@ -5,6 +5,7 @@ import { APP_NAME, GITHUB_REPO, DOCS_URL, APP_VERSION } from '../constants.js';
 const NAV = [
   { id: 'generate', label: '生成订阅', icon: 'fa-bolt' },
   { id: 'nodes', label: '节点管理', icon: 'fa-network-wired' },
+  { id: 'subs', label: '订阅管理', icon: 'fa-folder-open' },
   { id: 'subscribe', label: '订阅链接', icon: 'fa-link' },
 ];
 

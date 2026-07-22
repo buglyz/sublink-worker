@@ -4,6 +4,7 @@ import { PREDEFINED_RULE_SETS, UNIFIED_RULES } from '../config/index.js';
 import { listTemplateDetails } from '../templates/index.js';
 import { CustomRules } from './CustomRules.jsx';
 import { NodeLibrary } from './NodeLibrary.jsx';
+import { SubscriptionManager } from './SubscriptionManager.jsx';
 import { formLogicFn } from './formLogic.js';
 
 const LINK_FIELDS = [
@@ -431,9 +432,13 @@ export const Form = (props) => {
       <section x-show={'$store.ui.page === "nodes"'} class="space-y-4">
         <div>
           <h1 class="text-3xl font-semibold tracking-tight">节点管理</h1>
-          <p class="text-muted mt-2">导入与管理节点；保存后在生成订阅页勾选使用</p>
+          <p class="text-muted mt-2">导入与管理节点；保存后在生成订阅/订阅管理中勾选使用</p>
         </div>
         <NodeLibrary t={t} />
+      </section>
+
+      <section x-show={'$store.ui.page === "subs"'} class="space-y-4">
+        <SubscriptionManager />
       </section>
 
       <section x-show={'$store.ui.page === "subscribe"'} class="space-y-4">
@@ -454,10 +459,28 @@ export const Form = (props) => {
         </div>
 
         <div class="space-y-4" x-show="generatedLinks" x-cloak>
+          <div class="pixel-card mm-card" x-show="generatedLinks.managed">
+            <div class="card-header border-b border-[var(--border)] pb-4">
+              <div class="card-title text-base">已保存的订阅</div>
+              <div class="card-desc">已写入订阅管理，可随时编辑节点/模板；客户端请用此链接</div>
+            </div>
+            <div class="card-content pt-4 space-y-2">
+              <input type="text" class="mm-input font-mono text-xs" readOnly x-bind:value="generatedLinks.managed || ''" x-on:click="$el.select()" />
+              <div class="flex flex-wrap gap-2">
+                <button type="button" class="mm-btn mm-btn-primary mm-btn-sm" x-on:click={'const u = generatedLinks.managed; if (!u) return; navigator.clipboard.writeText(u).then(() => alert("已复制")).catch(() => alert(u));'}>
+                  复制订阅链接
+                </button>
+                <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-on:click={'window.__SUBLINK_UI__.setPage("subs")'}>
+                  去订阅管理编辑
+                </button>
+              </div>
+            </div>
+          </div>
+
           <div class="pixel-card mm-card" x-show="$store.auth.exportSubUrl">
             <div class="card-header border-b border-[var(--border)] pb-4">
-              <div class="card-title text-base">Clash 订阅链接</div>
-              <div class="card-desc">默认 Clash YAML；生成时选择的模板/规则会保存并应用于此链接</div>
+              <div class="card-title text-base">节点库总订阅（全部启用节点）</div>
+              <div class="card-desc">包含节点库全部启用节点；规则/模板取最近一次生成偏好</div>
             </div>
             <div class="card-content pt-4 space-y-2">
               <input
@@ -470,17 +493,10 @@ export const Form = (props) => {
               <div class="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  class="mm-btn mm-btn-primary mm-btn-sm"
-                  x-on:click={'const u = $store.auth.exportSubUrl; if (!u) return; navigator.clipboard.writeText(u).then(() => alert("已复制订阅链接")).catch(() => alert(u));'}
-                >
-                  复制 Clash 订阅
-                </button>
-                <button
-                  type="button"
                   class="mm-btn mm-btn-outline mm-btn-sm"
-                  x-on:click={'if (!confirm("轮换 Token 后旧链接立即失效？")) return; $store.auth.rotateExportToken().then((ok) => alert(ok ? "已轮换" : ($store.auth.error || "失败")));'}
+                  x-on:click={'const u = $store.auth.exportSubUrl; if (!u) return; navigator.clipboard.writeText(u).then(() => alert("已复制")).catch(() => alert(u));'}
                 >
-                  轮换 Token
+                  复制总订阅
                 </button>
               </div>
             </div>
@@ -489,7 +505,7 @@ export const Form = (props) => {
           <div class="pixel-card mm-card">
             <div class="card-header border-b border-[var(--border)] pb-4">
               <div class="card-title text-base">多客户端转换链接</div>
-              <div class="card-desc">本次生成的 Clash / Sing-box / Surge / Xray 地址</div>
+              <div class="card-desc">本次生成的 Clash / Sing-box / Surge / Xray 参数链接（不会替代已保存订阅）</div>
             </div>
             <div class="card-content pt-2 space-y-4">
               {LINK_FIELDS.map((field) => (

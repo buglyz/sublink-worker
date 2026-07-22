@@ -28,14 +28,14 @@ export const Layout = (props) => {
             page: (function () {
               try {
                 var saved = localStorage.getItem('sublink_page') || 'generate';
-                if (saved === 'generate' || saved === 'nodes' || saved === 'subscribe') return saved;
+                if (saved === 'generate' || saved === 'nodes' || saved === 'subscribe' || saved === 'subs') return saved;
                 var hash = (location.hash || '').replace('#', '');
-                if (hash === 'nodes' || hash === 'subscribe' || hash === 'generate') return hash;
+                if (hash === 'nodes' || hash === 'subscribe' || hash === 'generate' || hash === 'subs') return hash;
               } catch (e) {}
               return 'generate';
             })(),
             setPage: function (p) {
-              if (p !== 'generate' && p !== 'nodes' && p !== 'subscribe') return;
+              if (p !== 'generate' && p !== 'nodes' && p !== 'subscribe' && p !== 'subs') return;
               this.page = p;
               try { localStorage.setItem('sublink_page', p); } catch (e) {}
               try { history.replaceState(null, '', '#' + p); } catch (e) {}
@@ -207,7 +207,7 @@ export const Layout = (props) => {
                 });
                 window.addEventListener('hashchange', function () {
                   var h = (location.hash || '').replace('#', '');
-                  if (h === 'generate' || h === 'nodes' || h === 'subscribe') self.setPage(h);
+                  if (h === 'generate' || h === 'nodes' || h === 'subscribe' || h === 'subs') self.setPage(h);
                 });
               }
             };

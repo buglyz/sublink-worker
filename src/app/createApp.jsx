@@ -20,6 +20,7 @@ import { AuthService } from '../services/authService.js';
 import { NodeStorageService } from '../services/nodeStorageService.js';
 import { ExportTokenService } from '../services/exportTokenService.js';
 import { NodeImportService } from '../services/nodeImportService.js';
+import { SubscriptionStorageService } from '../services/subscriptionStorageService.js';
 import { ServiceError, MissingDependencyError, UnauthorizedError, InvalidPayloadError } from '../services/errors.js';
 import { normalizeRuntime } from '../runtime/runtimeConfig.js';
 import { PREDEFINED_RULE_SETS, SING_BOX_CONFIG, SING_BOX_CONFIG_V1_11, generateSubconverterConfig } from '../config/index.js';
@@ -36,7 +37,8 @@ export function createApp(bindings = {}) {
         auth: new AuthService(runtime.kv, { password: authPassword }),
         nodes: runtime.kv ? new NodeStorageService(runtime.kv) : null,
         exportToken: runtime.kv ? new ExportTokenService(runtime.kv) : null,
-        nodeImport: runtime.kv ? new NodeImportService(new NodeStorageService(runtime.kv)) : null
+        nodeImport: runtime.kv ? new NodeImportService(new NodeStorageService(runtime.kv)) : null,
+        subscriptions: runtime.kv ? new SubscriptionStorageService(runtime.kv) : null
     };
 
     const app = new Hono();
@@ -228,9 +230,81 @@ export function createApp(bindings = {}) {
         }
     });
 
-    // Short subscription path for clients (default)
+    // Managed subscriptions (miaomiaowu-style)
+    app.get('/api/subscriptions', requireAuth, async (c) => {
+        try {
+            const items = await requireSubscriptions(services.subscriptions).list();
+            const origin = new URL(c.req.url).origin;
+            return c.json({
+                items: items.map((s) => ({
+                    ...s,
+                    url: `${origin}/subscribe/${encodeURIComponent(s.slug)}`
+                }))
+            });
+        } catch (error) {
+            return handleError(c, error, runtime.logger);
+        }
+    });
+
+    app.post('/api/subscriptions', requireAuth, async (c) => {
+        try {
+            const body = await c.req.json().catch(() => ({}));
+            const item = await requireSubscriptions(services.subscriptions).create(body);
+            const origin = new URL(c.req.url).origin;
+            return c.json({ item: { ...item, url: `${origin}/subscribe/${encodeURIComponent(item.slug)}` } }, 201);
+        } catch (error) {
+            return handleError(c, error, runtime.logger);
+        }
+    });
+
+    app.get('/api/subscriptions/:id', requireAuth, async (c) => {
+        try {
+            const item = await requireSubscriptions(services.subscriptions).getById(c.req.param('id'));
+            if (!item) throw new ServiceError('订阅不存在', 404);
+            const origin = new URL(c.req.url).origin;
+            return c.json({ item: { ...item, url: `${origin}/subscribe/${encodeURIComponent(item.slug)}` } });
+        } catch (error) {
+            return handleError(c, error, runtime.logger);
+        }
+    });
+
+    app.put('/api/subscriptions/:id', requireAuth, async (c) => {
+        try {
+            const body = await c.req.json().catch(() => ({}));
+            const item = await requireSubscriptions(services.subscriptions).update(c.req.param('id'), body);
+            const origin = new URL(c.req.url).origin;
+            return c.json({ item: { ...item, url: `${origin}/subscribe/${encodeURIComponent(item.slug)}` } });
+        } catch (error) {
+            return handleError(c, error, runtime.logger);
+        }
+    });
+
+    app.delete('/api/subscriptions/:id', requireAuth, async (c) => {
+        try {
+            await requireSubscriptions(services.subscriptions).remove(c.req.param('id'));
+            return c.json({ ok: true });
+        } catch (error) {
+            return handleError(c, error, runtime.logger);
+        }
+    });
+
+    // Public Clash subscription for a managed subscribe file
+    app.get('/subscribe/:slug', async (c) => {
+        try {
+            return await exportManagedSubscription(c.req.param('slug') || '', c);
+        } catch (error) {
+            return handleError(c, error, runtime.logger);
+        }
+    });
+
+    // Short subscription path for library-wide export (legacy default)
     app.get('/sub/:id', async (c) => {
         try {
+            // Prefer managed subscription slug if exists
+            if (services.subscriptions) {
+                const managed = await services.subscriptions.getBySlug(c.req.param('id') || '');
+                if (managed) return await exportManagedSubscription(managed.slug, c);
+            }
             return await exportNodesSubscription(c.req.param('id') || '', c);
         } catch (error) {
             return handleError(c, error, runtime.logger);
@@ -364,6 +438,99 @@ export function createApp(bindings = {}) {
             'Cache-Control': 'no-store',
             'Content-Disposition': 'inline; filename="sublink.yaml"',
             'X-Sublink-Rules': rulesLabel
+        });
+    }
+
+    async function exportManagedSubscription(slug, c) {
+        const subSvc = requireSubscriptions(services.subscriptions);
+        const item = await subSvc.getBySlug(slug);
+        if (!item || item.enabled === false) {
+            throw new ServiceError('订阅不存在或已禁用', 404);
+        }
+
+        const allNodes = await requireNodeStorage(services.nodes).list();
+        const idSet = new Set((item.nodeIds || []).map(String));
+        let selected = allNodes.filter((n) => idSet.has(String(n.id)) && n.enabled !== false && n.raw);
+        // If no nodeIds configured, fall back to all enabled nodes (first-time empty edit)
+        if (!idSet.size) {
+            selected = allNodes.filter((n) => n.enabled !== false && n.raw);
+        }
+
+        const lines = selected
+            .map((n) => String(n.raw).trim())
+            .filter(Boolean)
+            .filter((raw) => !/^https?:\/\//i.test(raw));
+
+        if (!lines.length) {
+            throw new ServiceError('该订阅未包含可用节点，请先在订阅管理中添加节点', 404);
+        }
+
+        const format = String(c.req.query('format') || c.req.query('target') || 'clash').toLowerCase();
+        const joined = lines.join('\n');
+
+        if (format === 'raw' || format === 'uri' || format === 'text') {
+            return c.text(joined, 200, {
+                'Content-Type': 'text/plain; charset=utf-8',
+                'Profile-Update-Interval': '12',
+                'Cache-Control': 'no-store'
+            });
+        }
+        if (format === 'base64' || format === 'b64' || format === 'v2ray') {
+            return c.text(encodeBase64(joined), 200, {
+                'Content-Type': 'text/plain; charset=utf-8',
+                'Profile-Update-Interval': '12',
+                'Cache-Control': 'no-store'
+            });
+        }
+
+        const lang = resolveLanguage(c.get('lang') || c.req.query('lang'));
+        const ua = c.req.query('ua') || getRequestHeader(c.req, 'User-Agent') || DEFAULT_USER_AGENT;
+        const templateId = (c.req.query('template') || item.template || '').trim();
+
+        if (templateId || item.mode === 'template') {
+            if (!templateId) {
+                throw new ServiceError('订阅配置了模板模式但未指定模板', 400);
+            }
+            const builder = new TemplateClashBuilder(joined, templateId, { lang, userAgent: ua });
+            await builder.build();
+            return c.text(builder.formatConfig(), 200, {
+                'Content-Type': 'text/yaml; charset=utf-8',
+                'Profile-Update-Interval': '12',
+                'Cache-Control': 'no-store',
+                'Content-Disposition': `inline; filename="${item.slug || 'sub'}.yaml"`,
+                'X-Sublink-Template': String(templateId),
+                'X-Sublink-Subscription': item.id
+            });
+        }
+
+        const selectedRules = resolveRulesPreference(
+            c.req.query('selectedRules'),
+            item.selectedRules
+        );
+        const customRules = resolveCustomRulesPreference(
+            c.req.query('customRules'),
+            item.customRules
+        );
+        const builder = new ClashConfigBuilder(
+            joined,
+            selectedRules,
+            customRules,
+            undefined,
+            lang,
+            ua,
+            !!item.groupByCountry,
+            false,
+            undefined,
+            undefined,
+            item.includeAutoSelect !== false
+        );
+        await builder.build();
+        return c.text(builder.formatConfig(), 200, {
+            'Content-Type': 'text/yaml; charset=utf-8',
+            'Profile-Update-Interval': '12',
+            'Cache-Control': 'no-store',
+            'Content-Disposition': `inline; filename="${item.slug || 'sub'}.yaml"`,
+            'X-Sublink-Subscription': item.id
         });
     }
 
@@ -963,6 +1130,13 @@ function getRequestHeader(request, name) {
 function requireNodeStorage(service) {
     if (!service) {
         throw new MissingDependencyError('Node storage functionality is unavailable');
+    }
+    return service;
+}
+
+function requireSubscriptions(service) {
+    if (!service) {
+        throw new MissingDependencyError('Subscription management requires KV');
     }
     return service;
 }

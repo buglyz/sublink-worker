@@ -550,6 +550,52 @@ export const formLogicFn = (t) => {
                                 },
                                 body: JSON.stringify({ prefs })
                             });
+
+                            // Also create a managed subscription snapshot (nodes + template) so it is stored
+                            try {
+                                let nodeIds = [];
+                                const picker = document.querySelector('[x-data*="nodePickerData"]');
+                                const pd = picker && picker._x_dataStack && picker._x_dataStack[0];
+                                if (pd && Array.isArray(pd.nodes)) {
+                                    nodeIds = pd.nodes.filter((n) => n.picked && n.enabled !== false).map((n) => n.id);
+                                }
+                                // fallback: all enabled if none picked but input present
+                                if (!nodeIds.length && pd && Array.isArray(pd.nodes)) {
+                                    nodeIds = pd.nodes.filter((n) => n.enabled !== false).map((n) => n.id);
+                                }
+                                const name = '订阅 ' + new Date().toLocaleString();
+                                const createRes = await fetch('/api/subscriptions', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        Authorization: 'Bearer ' + token
+                                    },
+                                    body: JSON.stringify({
+                                        name,
+                                        description: '由生成页自动保存',
+                                        nodeIds,
+                                        mode: prefs.mode,
+                                        template: prefs.template,
+                                        selectedRules: prefs.selectedRules,
+                                        customRules: prefs.customRules,
+                                        groupByCountry: prefs.groupByCountry,
+                                        includeAutoSelect: prefs.includeAutoSelect
+                                    })
+                                });
+                                if (createRes.ok) {
+                                    const created = await createRes.json().catch(() => ({}));
+                                    const item = created.item;
+                                    if (item && item.url) {
+                                        this.generatedLinks = {
+                                            ...this.generatedLinks,
+                                            managed: item.url
+                                        };
+                                        this.lastManagedSubscription = item;
+                                    }
+                                }
+                            } catch (e2) {
+                                console.warn('auto-save subscription failed', e2);
+                            }
                         }
                     } catch (e) {
                         console.warn('save export prefs failed', e);
