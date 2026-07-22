@@ -72,13 +72,15 @@ export const formLogicFn = (t) => {
         return {
             input: '',
             showAdvanced: false,
-            // Accordion states for each section (二级手风琴状态)
+            // Accordion: main convert path always open; advanced groups collapsed by default
             accordionSections: {
-                rules: true,        // 规则选择 - 默认展开
+                template: true,     // Clash 模板
+                rules: false,       // 规则选择
                 customRules: false, // 自定义规则
                 general: false,     // 通用设置
-                baseConfig: false,  // 基础配置
-                ua: false          // User Agent
+                advanced: false,    // 进阶：Subconverter / Base / UA
+                baseConfig: false,
+                ua: false
             },
             selectedRules: [],
             selectedPredefinedRule: 'balanced',
@@ -144,13 +146,13 @@ export const formLogicFn = (t) => {
                 const initialUrlParams = new URLSearchParams(window.location.search);
                 this.currentConfigId = initialUrlParams.get('configId') || '';
 
-                // Load accordion states
+                // Load accordion states (merge so new keys get defaults)
                 const savedAccordion = localStorage.getItem('accordionSections');
                 if (savedAccordion) {
                     try {
-                        this.accordionSections = JSON.parse(savedAccordion);
+                        this.accordionSections = { ...this.accordionSections, ...JSON.parse(savedAccordion) };
                     } catch (e) {
-                        // If parsing fails, keep defaults
+                        // keep defaults
                     }
                 }
 

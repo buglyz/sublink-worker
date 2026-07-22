@@ -5,15 +5,9 @@ export const CustomRules = (props) => {
   const { t } = props;
 
   return (
-    <div x-data="customRulesData()" class="mm-card p-4 sm:p-5">
-      <div class="mm-section-head">
-        <div class="flex items-start gap-3">
-          <span class="icon"><i class="fas fa-stream text-sm"></i></span>
-          <div>
-            <div class="mm-title">{t('customRulesSection')}</div>
-            <p class="mm-desc mt-0.5">{t('customRulesSectionTooltip')}</p>
-          </div>
-        </div>
+    <div x-data="customRulesData()" class="space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <p class="mm-desc">{t('customRulesSectionTooltip')}</p>
         <div class="mm-tab-bar">
           <button
             type="button"
