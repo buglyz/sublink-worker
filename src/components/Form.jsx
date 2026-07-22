@@ -276,21 +276,34 @@ export const Form = (props) => {
               </div>
 
               <div class="flex flex-col sm:flex-row gap-2 pt-1">
-                <button type="submit" class="mm-btn mm-btn-primary flex-1" x-bind:disabled="loading">
-                  <i class="fas" x-bind:class="loading ? 'fa-spinner fa-spin' : 'fa-bolt'"></i>
-                  <span x-text="loading ? processingText : (convertText || '生成订阅文件')">{t('convert')}</span>
+                <button type="button" class="mm-btn mm-btn-primary flex-1" x-on:click="parseNodes()" x-bind:disabled="!input || !String(input).trim()">
+                  <i class="fas fa-magnifying-glass"></i>
+                  解析节点
                 </button>
                 <button
                   type="button"
-                  class="mm-btn mm-btn-outline"
-                  x-on:click="window.dispatchEvent(new CustomEvent('nodes-import-from-input')); window.__SUBLINK_UI__.setPage('nodes')"
+                  class="mm-btn mm-btn-outline flex-1"
+                  x-on:click="saveNodes()"
+                  x-bind:disabled="!input || !String(input).trim()"
                 >
-                  <i class="fas fa-bookmark"></i>
-                  存入节点库
+                  <i class="fas fa-floppy-disk"></i>
+                  保存节点
+                </button>
+                <button type="submit" class="mm-btn mm-btn-secondary flex-1" x-bind:disabled="loading || !input || !String(input).trim()">
+                  <i class="fas" x-bind:class="loading ? 'fa-spinner fa-spin' : 'fa-file-export'"></i>
+                  <span x-text="loading ? processingText : '生成订阅'">{t('convert')}</span>
                 </button>
                 <button type="button" class="mm-btn mm-btn-outline" x-on:click="clearAll()">
-                  {t('clear')}
+                  清空
                 </button>
+              </div>
+              <p class="text-sm text-[var(--primary)]" x-show="parseMessage" x-text="parseMessage"></p>
+              <div
+                class="border-2 border-[var(--border)] bg-[color-mix(in_srgb,var(--muted)_35%,transparent)] px-3 py-2.5 text-sm space-y-1"
+                x-show="parsePreview"
+              >
+                <div class="font-medium">解析预览</div>
+                <div class="text-muted font-mono text-xs" x-text="parsePreview ? ('行数 ' + parsePreview.lines + ' · 节点 ' + parsePreview.linkCount + ' · 订阅 ' + parsePreview.subCount) : ''"></div>
               </div>
             </div>
           </div>

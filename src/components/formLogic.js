@@ -111,6 +111,8 @@ export const formLogicFn = (t) => {
             customShortCode: '',
             parsingUrl: false,
             parseDebounceTimer: null,
+            parsePreview: null,
+            parseMessage: '',
             // These will be populated from window.APP_TRANSLATIONS
             processingText: '',
             convertText: '',
@@ -381,9 +383,63 @@ export const formLogicFn = (t) => {
                     this.generatedLinks = null;
                     this.shortenedLinks = null;
                     this.customShortCode = '';
+                    this.parsePreview = null;
+                    this.parseMessage = '';
                     // Also clear from localStorage
                     localStorage.removeItem('customShortCode');
                 }
+            },
+
+            // Count share lines / subscription URLs (miaomiaowu-style "解析节点")
+            parseNodes() {
+                const text = String(this.input || '').trim();
+                if (!text) {
+                    this.parsePreview = null;
+                    this.parseMessage = '请先粘贴节点链接或订阅地址';
+                    return;
+                }
+                const lines = text.split(/[\r\n]+/).map((l) => l.trim()).filter(Boolean);
+                const protocols = {};
+                let linkCount = 0;
+                let subCount = 0;
+                for (const line of lines) {
+                    if (/^https?:\/\//i.test(line)) {
+                        subCount += 1;
+                        continue;
+                    }
+                    const m = line.match(/^([a-z0-9+.-]+):\/\//i);
+                    if (m) {
+                        linkCount += 1;
+                        const p = m[1].toLowerCase();
+                        protocols[p] = (protocols[p] || 0) + 1;
+                    } else if (line.length > 20) {
+                        // possible base64 blob
+                        linkCount += 1;
+                        protocols['base64/raw'] = (protocols['base64/raw'] || 0) + 1;
+                    }
+                }
+                this.parsePreview = { lines: lines.length, linkCount, subCount, protocols };
+                const parts = [];
+                if (linkCount) parts.push(`${linkCount} 条节点链接`);
+                if (subCount) parts.push(`${subCount} 个订阅 URL`);
+                if (!parts.length) parts.push('未识别到有效节点/订阅');
+                const protoText = Object.keys(protocols).length
+                    ? '（' + Object.entries(protocols).map(([k, v]) => `${k}:${v}`).join(' · ') + '）'
+                    : '';
+                this.parseMessage = `解析完成：共 ${lines.length} 行 · ${parts.join(' · ')}${protoText}`;
+            },
+
+            // Save current input into node library (miaomiaowu-style "保存节点")
+            saveNodes() {
+                const text = String(this.input || '').trim();
+                if (!text) {
+                    this.parseMessage = '没有可保存的内容';
+                    return;
+                }
+                this.parseNodes();
+                window.dispatchEvent(new CustomEvent('nodes-import-from-input'));
+                try { window.__SUBLINK_UI__.setPage('nodes'); } catch (e) {}
+                this.parseMessage = (this.parseMessage ? this.parseMessage + ' · ' : '') + '已发送到节点库（需登录后持久化）';
             },
 
             updateConfigIdInUrl(configId) {
