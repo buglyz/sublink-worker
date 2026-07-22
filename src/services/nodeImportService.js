@@ -1,11 +1,11 @@
 import { InvalidPayloadError, ServiceError } from './errors.js';
 import { fetchSubscriptionWithFormat } from '../parsers/subscription/httpSubscriptionFetcher.js';
 import { parseSubscriptionContent } from '../parsers/subscription/subscriptionContentParser.js';
-
-const URI_RE = /^(ss|ssr|vmess|vless|trojan|hysteria|hysteria2|hy2|tuic|anytls|socks5?|wireguard|snell):\/\//i;
+import { extractUriLines, proxiesToShareNodes } from '../utils/proxyShareUri.js';
 
 /**
  * Import nodes from a remote subscription URL into the node library.
+ * Expands Clash / Sing-Box / URI-list subscriptions into individual nodes.
  */
 export class NodeImportService {
     constructor(nodeStorage) {
@@ -24,114 +24,62 @@ export class NodeImportService {
             throw new ServiceError('无法拉取订阅内容（网络错误或响应为空）', 502);
         }
 
-        const shareLines = extractShareLines(fetched.content);
+        const tag = options.tag || hostnameOf(target) || 'remote';
         const parsed = parseSubscriptionContent(fetched.content);
-        // Also collect URI-like strings if parser returned a line array
-        if (Array.isArray(parsed)) {
-            for (const line of parsed) {
-                if (typeof line === 'string' && URI_RE.test(line.trim())) {
-                    shareLines.push(line.trim());
-                }
-            }
+
+        // 1) Structured proxies (Clash / Sing-Box / Surge) → one node per proxy
+        let candidates = proxiesToShareNodes(parsed, { tag });
+
+        // 2) Plain URI list lines from raw content / line array
+        if (!candidates.length) {
+            const uriLines = [
+                ...extractUriLines(fetched.content),
+                ...(Array.isArray(parsed) ? parsed.filter((l) => typeof l === 'string') : [])
+            ];
+            candidates = proxiesToShareNodes(uriLines, { tag });
         }
 
-        const uniqueLines = [...new Set(shareLines.filter(Boolean))];
+        if (!candidates.length) {
+            throw new ServiceError(
+                `订阅已拉取，但未能解析出节点（格式: ${fetched.format || 'unknown'}）。请确认链接返回的是节点列表/Clash/Sing-box 配置。`,
+                422
+            );
+        }
+
         const existing = await this.nodeStorage.list();
         const existingRaws = new Set(existing.map((n) => n.raw));
-        const now = Date.now();
         let added = 0;
-        const errors = [];
+        let skipped = 0;
 
-        if (uniqueLines.length) {
-            for (const raw of uniqueLines) {
-                if (existingRaws.has(raw)) continue;
-                const protocol = (raw.match(URI_RE)?.[1] || 'unknown').toLowerCase();
-                existing.push({
-                    id: uid(),
-                    raw,
-                    name: nameFromUri(raw),
-                    protocol,
-                    tag: options.tag || 'remote',
-                    enabled: true,
-                    selected: false,
-                    createdAt: now,
-                    updatedAt: now
-                });
-                existingRaws.add(raw);
-                added += 1;
+        for (const node of candidates) {
+            if (existingRaws.has(node.raw)) {
+                skipped += 1;
+                continue;
             }
-        } else {
-            // Structured sub without share URIs: store the URL itself as a remote source node
-            if (!existingRaws.has(target)) {
-                existing.push({
-                    id: uid(),
-                    raw: target,
-                    name: options.name || hostnameOf(target) || '远程订阅',
-                    protocol: 'http-sub',
-                    tag: options.tag || 'remote',
-                    enabled: true,
-                    selected: false,
-                    createdAt: now,
-                    updatedAt: now
-                });
-                added = 1;
-            } else {
-                errors.push('该订阅 URL 已在节点库中');
-            }
+            existing.push(node);
+            existingRaws.add(node.raw);
+            added += 1;
         }
 
         const nodes = await this.nodeStorage.save(existing);
         return {
             added,
+            skipped,
             total: nodes.length,
             format: fetched.format || 'unknown',
+            source: target,
             nodes,
-            errors,
             message: added
-                ? `成功导入 ${added} 个节点（格式: ${fetched.format || 'unknown'}）`
-                : (errors[0] || '未发现新节点')
+                ? `成功导入 ${added} 个节点${skipped ? `，跳过重复 ${skipped}` : ''}（格式: ${fetched.format || 'unknown'}）`
+                : `未新增节点（${skipped} 个已存在，格式: ${fetched.format || 'unknown'}）`
         };
     }
 }
 
-function extractShareLines(content) {
-    return String(content || '')
-        .split(/\r?\n/)
-        .map((l) => l.trim())
-        .filter((l) => l && !l.startsWith('#') && !l.startsWith('//'))
-        .filter((l) => URI_RE.test(l));
-}
-
-function nameFromUri(line) {
-    try {
-        if (line.includes('#')) {
-            const hash = line.split('#').pop();
-            const decoded = decodeURIComponent(hash || '');
-            if (decoded) return decoded.slice(0, 80);
-        }
-        if (line.startsWith('vmess://')) {
-            try {
-                const b64 = line.slice(8).replace(/-/g, '+').replace(/_/g, '/');
-                const json = JSON.parse(atob(b64));
-                if (json.ps) return String(json.ps).slice(0, 80);
-                if (json.add) return String(json.add).slice(0, 80);
-            } catch {}
-        }
-        const u = new URL(line);
-        if (u.hostname) return (u.hostname + (u.port ? ':' + u.port : '')).slice(0, 80);
-    } catch {}
-    return line.slice(0, 40) + (line.length > 40 ? '…' : '');
-}
-
 function hostnameOf(url) {
-    try { return new URL(url).hostname; } catch { return ''; }
-}
-
-function uid() {
-    return 'n_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
-}
-
-function atob(str) {
-    if (typeof globalThis.atob === 'function') return globalThis.atob(str);
-    return Buffer.from(str, 'base64').toString('utf8');
+    try {
+        return new URL(url).hostname;
+    } catch {
+        return '';
+    }
 }
