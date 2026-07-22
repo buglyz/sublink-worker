@@ -420,8 +420,8 @@ export const Form = (props) => {
             ))}
             <div class="border-2 border-[var(--border)] bg-[color-mix(in_srgb,var(--muted)_35%,transparent)] p-4 text-sm text-muted space-y-1">
               <div class="font-semibold text-[var(--foreground)] mb-1">使用说明</div>
-              <p>• <strong class="text-[var(--foreground)]">默认推荐：</strong>到「节点管理」复制<strong>默认订阅链接（长期）</strong>，填入客户端（与登录无关）</p>
-              <p>• 下方 Clash/Sing-box 等是「带参数的转换链接」，适合临时/模板规则，不等于节点库长期订阅</p>
+              <p>• 生成后可在「订阅链接」页复制节点库订阅与多客户端链接</p>
+              <p>• 节点库订阅使用导出 Token，客户端可持续更新启用节点</p>
               <p>• 可缩短转换链接（依赖 KV）</p>
             </div>
           </div>
@@ -439,77 +439,76 @@ export const Form = (props) => {
       <section x-show={'$store.ui.page === "subscribe"'} class="space-y-4">
         <div>
           <h1 class="text-3xl font-semibold tracking-tight">订阅链接</h1>
-          <p class="text-muted mt-2">默认使用长期导出 Token；转换链接为可选</p>
+          <p class="text-muted mt-2">生成订阅后在这里复制客户端链接；节点库订阅在生成后可用</p>
         </div>
 
-        <div class="pixel-card mm-card">
-          <div class="card-header border-b border-[var(--border)] pb-4">
-            <div class="card-title text-base">默认订阅（长期）</div>
-            <div class="card-desc">登录后自动创建 · 退出不影响客户端 · 节点库启用节点会实时反映</div>
-          </div>
-          <div class="card-content pt-4 space-y-3">
-            <template x-if="!$store.auth.authenticated">
-              <p class="text-sm text-muted">请先登录以查看默认长期订阅链接</p>
-            </template>
-            <template x-if="$store.auth.authenticated">
-              <div class="space-y-2">
-                <input
-                  type="text"
-                  class="mm-input font-mono text-xs"
-                  readOnly
-                  x-bind:value="$store.auth.exportSubUrl || ''"
-                  x-on:click="$el.select()"
-                  placeholder="加载中…"
-                />
-                <div class="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    class="mm-btn mm-btn-primary mm-btn-sm"
-                    x-on:click="
-                      const u = $store.auth.exportSubUrl;
-                      if (!u) { alert('长期订阅尚未就绪'); return; }
-                      navigator.clipboard.writeText(u).then(() => alert('已复制默认长期订阅')).catch(() => alert(u));
-                    "
-                  >
-                    复制长期订阅
-                  </button>
-                  <button
-                    type="button"
-                    class="mm-btn mm-btn-outline mm-btn-sm"
-                    x-on:click="
-                      if (!confirm('轮换后旧链接立即失效？')) return;
-                      $store.auth.rotateExportToken().then((ok) => alert(ok ? '已轮换' : ($store.auth.error || '失败')));
-                    "
-                  >
-                    轮换
-                  </button>
-                </div>
-              </div>
-            </template>
-          </div>
-        </div>
-
+        {/* Empty until user has generated OR has nodes with export URL ready after generate flow */}
         <div class="pixel-card mm-card" x-show="!generatedLinks">
-          <div class="card-content py-8 text-center">
-            <p class="text-muted mb-4">暂无「转换生成」的多客户端链接</p>
-            <button type="button" class="mm-btn mm-btn-outline" x-on:click={'window.__SUBLINK_UI__.setPage("generate")'}>去生成转换链接</button>
+          <div class="card-content py-10 text-center space-y-4">
+            <p class="text-muted">还没有订阅链接。请先导入节点，再到「生成订阅」创建。</p>
+            <div class="flex flex-wrap justify-center gap-2">
+              <button type="button" class="mm-btn mm-btn-outline" x-on:click={'window.__SUBLINK_UI__.setPage("nodes")'}>去导入节点</button>
+              <button type="button" class="mm-btn mm-btn-primary" x-on:click={'window.__SUBLINK_UI__.setPage("generate")'}>去生成订阅</button>
+            </div>
           </div>
         </div>
-        <div class="pixel-card mm-card" x-show="generatedLinks" x-cloak>
-          <div class="card-header border-b border-[var(--border)] pb-4">
-            <div class="card-title text-base">转换链接（可选）</div>
-            <div class="card-desc">带规则/模板参数的 /clash /singbox 等地址</div>
-          </div>
-          <div class="card-content pt-2 space-y-4">
-            {LINK_FIELDS.map((field) => (
-              <div class="space-y-1.5">
-                <div class="flex items-center justify-between gap-2">
-                  <label class="mm-label mb-0">{t(field.labelKey)}</label>
-                  <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-on:click={`copyToClipboard(shortenedLinks?.${field.key} || generatedLinks?.${field.key})`}>复制</button>
-                </div>
-                <input type="text" class="mm-input font-mono text-xs" readOnly x-bind:value={`shortenedLinks?.${field.key} || generatedLinks?.${field.key} || ''`} />
+
+        <div class="space-y-4" x-show="generatedLinks" x-cloak>
+          <div class="pixel-card mm-card" x-show="$store.auth.exportSubUrl">
+            <div class="card-header border-b border-[var(--border)] pb-4">
+              <div class="card-title text-base">节点库订阅</div>
+              <div class="card-desc">使用导出 Token，客户端可长期更新启用节点</div>
+            </div>
+            <div class="card-content pt-4 space-y-2">
+              <input
+                type="text"
+                class="mm-input font-mono text-xs"
+                readOnly
+                x-bind:value="$store.auth.exportSubUrl || ''"
+                x-on:click="$el.select()"
+              />
+              <div class="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  class="mm-btn mm-btn-primary mm-btn-sm"
+                  x-on:click="
+                    const u = $store.auth.exportSubUrl;
+                    if (!u) return;
+                    navigator.clipboard.writeText(u).then(() => alert('已复制订阅链接')).catch(() => alert(u));
+                  "
+                >
+                  复制订阅链接
+                </button>
+                <button
+                  type="button"
+                  class="mm-btn mm-btn-outline mm-btn-sm"
+                  x-on:click="
+                    if (!confirm('轮换 Token 后旧链接立即失效？')) return;
+                    $store.auth.rotateExportToken().then((ok) => alert(ok ? '已轮换' : ($store.auth.error || '失败')));
+                  "
+                >
+                  轮换 Token
+                </button>
               </div>
-            ))}
+            </div>
+          </div>
+
+          <div class="pixel-card mm-card">
+            <div class="card-header border-b border-[var(--border)] pb-4">
+              <div class="card-title text-base">多客户端转换链接</div>
+              <div class="card-desc">本次生成的 Clash / Sing-box / Surge / Xray 地址</div>
+            </div>
+            <div class="card-content pt-2 space-y-4">
+              {LINK_FIELDS.map((field) => (
+                <div class="space-y-1.5">
+                  <div class="flex items-center justify-between gap-2">
+                    <label class="mm-label mb-0">{t(field.labelKey)}</label>
+                    <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-on:click={`copyToClipboard(shortenedLinks?.${field.key} || generatedLinks?.${field.key})`}>复制</button>
+                  </div>
+                  <input type="text" class="mm-input font-mono text-xs" readOnly x-bind:value={`shortenedLinks?.${field.key} || generatedLinks?.${field.key} || ''`} />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>

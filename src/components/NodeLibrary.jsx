@@ -63,6 +63,8 @@ export const NodeLibrary = (props) => {
         bootstrapped: false,
         loginError: '',
         syncTimer: null,
+        suppressSync: false,
+        lastSyncedJson: '',
 
         async init() {
           const self = this;
@@ -106,9 +108,14 @@ export const NodeLibrary = (props) => {
             this.nodes = [];
           }
           this.bootstrapped = true;
+          this.lastSyncedJson = JSON.stringify(this.nodes || []);
           this.$watch('nodes', () => {
             this.selectAll = this.nodes.length > 0 && this.nodes.every((n) => n.selected);
-            if (this.authenticated) this.scheduleSync();
+            if (this.suppressSync || !this.authenticated) return;
+            // Avoid PUT loops when server echo rewrites the same payload
+            const snap = JSON.stringify(this.nodes || []);
+            if (snap === this.lastSyncedJson) return;
+            this.scheduleSync();
           }, { deep: true });
         },
 
@@ -208,6 +215,7 @@ export const NodeLibrary = (props) => {
         async loadFromServer() {
           if (!this.authenticated) return;
           this.loading = true;
+          this.suppressSync = true;
           try {
             const res = await fetch('/api/nodes', { headers: this.headers() });
             if (res.status === 401) {
@@ -218,12 +226,15 @@ export const NodeLibrary = (props) => {
             }
             const data = await res.json();
             this.nodes = Array.isArray(data.nodes) ? data.nodes : [];
+            this.lastSyncedJson = JSON.stringify(this.nodes);
             localStorage.setItem(LOCAL_MIRROR, JSON.stringify(this.nodes));
             await this.loadExportToken();
           } catch (e) {
             this.flash = '加载节点失败: ' + (e.message || '');
           } finally {
             this.loading = false;
+            // next tick so Alpine watch for load assignment is ignored
+            setTimeout(() => { this.suppressSync = false; }, 0);
           }
         },
 
@@ -273,7 +284,7 @@ export const NodeLibrary = (props) => {
               this.exportToken = data.token || '';
               this.exportSubUrl = data.subscriptionUrl || '';
             }
-            this.persistMessage('已更新默认长期订阅链接');
+            this.persistMessage('已更新订阅 Token');
           } catch (e) {
             this.persistMessage(e.message || '轮换失败');
           }
@@ -285,7 +296,9 @@ export const NodeLibrary = (props) => {
         },
 
         async syncNow() {
-          if (!this.authenticated) return;
+          if (!this.authenticated || this.suppressSync) return;
+          const payload = JSON.stringify(this.nodes || []);
+          if (payload === this.lastSyncedJson) return;
           this.saving = true;
           try {
             const res = await fetch('/api/nodes', {
@@ -300,13 +313,14 @@ export const NodeLibrary = (props) => {
               this.flash = '登录已失效，请重新登录';
               return;
             }
-            const data = await res.json();
-            if (Array.isArray(data.nodes)) {
-              // preserve selection UI state if server normalizes
-              const selected = new Set(this.nodes.filter(n => n.selected).map(n => n.raw));
-              this.nodes = data.nodes.map(n => ({ ...n, selected: selected.has(n.raw) || n.selected }));
+            if (!res.ok) {
+              const data = await res.json().catch(() => ({}));
+              throw new Error(data.error || ('同步失败 ' + res.status));
             }
-            localStorage.setItem(LOCAL_MIRROR, JSON.stringify(this.nodes));
+            // Do NOT reassign this.nodes from server response — that re-triggers $watch and
+            // causes endless "同步中…" flicker. Trust local UI state after successful PUT.
+            this.lastSyncedJson = payload;
+            localStorage.setItem(LOCAL_MIRROR, payload);
           } catch (e) {
             this.flash = '同步失败: ' + (e.message || '');
           } finally {
@@ -457,10 +471,10 @@ export const NodeLibrary = (props) => {
         copySubUrl() {
           const url = this.subUrl();
           if (!url) {
-            this.persistMessage('长期订阅尚未就绪，请稍候或刷新');
+            this.persistMessage('订阅链接尚未就绪');
             return;
           }
-          navigator.clipboard.writeText(url).then(() => this.persistMessage('已复制默认长期订阅链接')).catch(() => {
+          navigator.clipboard.writeText(url).then(() => this.persistMessage('已复制订阅链接')).catch(() => {
             this.persistMessage(url);
           });
         },
@@ -601,18 +615,12 @@ export const NodeLibrary = (props) => {
             <div>
               <div class="card-title text-base">导入节点</div>
               <p class="card-desc">
-                KV 同步 · 跨设备
+                导入并管理节点 · 自动同步到云端
                 <span class="ml-2 font-mono text-[11px] text-[var(--primary)]" x-text="nodes.length + ' 节点 · 选中 ' + selectedCount"></span>
-                <span class="ml-2 text-[11px] opacity-70" x-show="saving">同步中…</span>
+                <span class="ml-2 text-[11px] opacity-70" x-show="saving" x-cloak>已同步保存…</span>
               </p>
             </div>
             <div class="flex flex-wrap gap-1.5">
-              <button type="button" class="mm-btn mm-btn-primary mm-btn-sm" x-on:click="copySubUrl()" x-show="authenticated">
-                <i class="fas fa-link text-[10px]"></i>复制长期订阅
-              </button>
-              <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-on:click="rotateExportToken()" x-show="authenticated">
-                <i class="fas fa-key text-[10px]"></i>轮换导出Token
-              </button>
               <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-on:click="loadFromServer()">
                 <i class="fas fa-rotate text-[10px]"></i>刷新
               </button>
@@ -622,25 +630,10 @@ export const NodeLibrary = (props) => {
               <button type="button" class="mm-btn mm-btn-primary mm-btn-sm" x-on:click="applyToConverter({ convert: true })" x-bind:disabled="selectedCount === 0">
                 <i class="fas fa-bolt text-[10px]"></i>用选中生成
               </button>
-              <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-show="authRequired" x-on:click="logout()">退出</button>
             </div>
           </div>
         </div>
         <div class="card-content pt-4 space-y-4">
-
-        <div class="border-2 border-[var(--border)] p-3 space-y-2" x-show="authenticated">
-          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <div>
-              <div class="mm-label mb-0">默认订阅链接（长期）</div>
-              <p class="text-xs text-muted">登录后自动创建 · 退出登录不影响客户端更新 · 仅「轮换」会作废</p>
-            </div>
-            <div class="flex flex-wrap gap-1.5">
-              <button type="button" class="mm-btn mm-btn-primary mm-btn-sm" x-on:click="copySubUrl()">复制长期订阅</button>
-              <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-on:click="rotateExportToken()">轮换</button>
-            </div>
-          </div>
-          <input type="text" class="mm-input font-mono text-xs" readOnly x-bind:value="subUrl()" x-on:click="$el.select()" placeholder="登录后自动生成…" />
-        </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-5 gap-3 mb-3">
           <div class="lg:col-span-3">
