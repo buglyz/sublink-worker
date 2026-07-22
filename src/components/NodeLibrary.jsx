@@ -420,12 +420,12 @@ export const NodeLibrary = (props) => {
   return (
     <div id="nodes" x-data="nodeLibraryData()" x-init="init()" class="space-y-4">
       {/* Login gate */}
-      <div x-show="!bootstrapped" class="mm-card p-8 text-center">
+      <div x-show="!bootstrapped" class="pixel-card mm-card p-8 text-center">
         <i class="fas fa-spinner fa-spin text-[var(--primary)]"></i>
         <p class="mm-desc mt-2">加载节点库…</p>
       </div>
 
-      <div x-show="bootstrapped && authRequired && !authenticated" class="mm-card max-w-md">
+      <div x-show="bootstrapped && authRequired && !authenticated" class="pixel-card mm-card max-w-md">
         <div class="border-b border-[var(--border)] px-5 py-4">
           <h2 class="text-lg font-semibold tracking-tight">登录节点库</h2>
           <p class="mm-desc mt-1">密码鉴权后节点将同步到服务端 KV，可跨设备访问。</p>
@@ -450,37 +450,32 @@ export const NodeLibrary = (props) => {
         </div>
       </div>
 
-      <div x-show="bootstrapped && authenticated" class="mm-card p-4 sm:p-5">
-        <div class="mm-section-head">
-          <div class="flex items-start gap-3">
-            <span class="icon"><i class="fas fa-network-wired text-sm"></i></span>
+      <div x-show="bootstrapped && authenticated" class="pixel-card mm-card">
+        <div class="card-header border-b border-[var(--border)] pb-4">
+          <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <div>
-              <div class="mm-title">节点库</div>
-              <p class="mm-desc mt-0.5">
+              <div class="card-title text-base">节点库</div>
+              <p class="card-desc">
                 KV 同步 · 跨设备
                 <span class="ml-2 font-mono text-[11px] text-[var(--primary)]" x-text="nodes.length + ' 节点 · 选中 ' + selectedCount"></span>
                 <span class="ml-2 text-[11px] opacity-70" x-show="saving">同步中…</span>
               </p>
             </div>
-          </div>
-          <div class="flex flex-wrap gap-1.5">
-            <button type="button" class="mm-btn mm-btn-ghost text-xs py-1.5" x-on:click="loadFromServer()">
-              <i class="fas fa-rotate text-[10px]"></i>
-              刷新
-            </button>
-            <button type="button" class="mm-btn mm-btn-secondary text-xs py-1.5" x-on:click="importFromInput()">
-              <i class="fas fa-file-import text-[10px]"></i>
-              从输入源导入
-            </button>
-            <button type="button" class="mm-btn mm-btn-primary text-xs py-1.5" x-on:click="applyToConverter({ convert: true })" x-bind:disabled="selectedCount === 0">
-              <i class="fas fa-bolt text-[10px]"></i>
-              用选中生成
-            </button>
-            <button type="button" class="mm-btn mm-btn-ghost text-xs py-1.5" x-show="authRequired" x-on:click="logout()">
-              退出
-            </button>
+            <div class="flex flex-wrap gap-1.5">
+              <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-on:click="loadFromServer()">
+                <i class="fas fa-rotate text-[10px]"></i>刷新
+              </button>
+              <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-on:click="importFromInput()">
+                <i class="fas fa-file-import text-[10px]"></i>从输入源导入
+              </button>
+              <button type="button" class="mm-btn mm-btn-primary mm-btn-sm" x-on:click="applyToConverter({ convert: true })" x-bind:disabled="selectedCount === 0">
+                <i class="fas fa-bolt text-[10px]"></i>用选中生成
+              </button>
+              <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-show="authRequired" x-on:click="logout()">退出</button>
+            </div>
           </div>
         </div>
+        <div class="card-content pt-4 space-y-4">
 
         <div class="grid grid-cols-1 lg:grid-cols-5 gap-3 mb-3">
           <div class="lg:col-span-3">
@@ -587,6 +582,7 @@ export const NodeLibrary = (props) => {
               </tbody>
             </table>
           </div>
+        </div>
         </div>
       </div>
 
