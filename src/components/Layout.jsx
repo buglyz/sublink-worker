@@ -61,6 +61,7 @@ export const Layout = (props) => {
               token: localStorage.getItem('sublink_auth_token') || '',
               authRequired: false,
               authenticated: false,
+              ready: false,
               kvReady: false,
               loading: false,
               password: '',
@@ -95,6 +96,8 @@ export const Layout = (props) => {
                   }
                 } catch (e) {
                   this.authenticated = !this.authRequired;
+                } finally {
+                  this.ready = true;
                 }
               },
               async login() {

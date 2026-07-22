@@ -6,6 +6,7 @@ import { Navbar } from '../components/Navbar.jsx';
 import { Form } from '../components/Form.jsx';
 import { Footer } from '../components/Footer.jsx';
 import { UpdateChecker } from '../components/UpdateChecker.jsx';
+import { AuthGate } from '../components/AuthGate.jsx';
 import { SingboxConfigBuilder } from '../builders/SingboxConfigBuilder.js';
 import { ClashConfigBuilder } from '../builders/ClashConfigBuilder.js';
 import { TemplateClashBuilder, listTemplates, listTemplateDetails } from '../builders/TemplateClashBuilder.js';
@@ -178,12 +179,29 @@ export function createApp(bindings = {}) {
         return c.html(
             <Layout title={t('pageTitle')} description={t('pageDescription')} keywords={t('pageKeywords')}>
                 <div class="flex min-h-svh flex-col bg-background">
-                    <Navbar />
-                    <main class="flex-1 mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 pt-24">
-                        <Form t={t} lang={lang} subtitle={subtitle} />
-                    </main>
-                    <Footer />
-                    <UpdateChecker />
+                    <AuthGate />
+                    <div
+                        class="flex min-h-svh flex-col"
+                        x-show={'$store.auth.ready && (!$store.auth.authRequired || $store.auth.authenticated)'}
+                        x-cloak
+                    >
+                        <Navbar />
+                        <main class="flex-1 mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 pt-24">
+                            <Form t={t} lang={lang} subtitle={subtitle} />
+                        </main>
+                        <Footer />
+                        <UpdateChecker />
+                    </div>
+                    <div
+                        class="flex min-h-svh items-center justify-center"
+                        x-show={'!$store.auth.ready'}
+                        x-cloak
+                    >
+                        <div class="text-center text-muted">
+                            <i class="fas fa-spinner fa-spin text-[var(--primary)] text-xl"></i>
+                            <p class="mt-3 text-sm">加载中…</p>
+                        </div>
+                    </div>
                 </div>
             </Layout>
         );

@@ -64,28 +64,8 @@ export const Navbar = () => {
           ></span>
           <span class="hidden lg:inline text-[10px] font-mono opacity-60">v{APP_VERSION}</span>
 
-          <template x-if="$store.auth.authRequired && !$store.auth.authenticated">
-            <div class="relative" x-data="{ open: false }">
-              <button type="button" class="pixel-button h-9 px-3 text-sm font-semibold border-2 border-[color:rgba(217,119,87,0.55)] bg-[color-mix(in_srgb,var(--primary)_20%,transparent)] text-[var(--primary)]" x-on:click="open = !open">
-                登录
-              </button>
-              <div
-                x-show="open"
-                x-cloak
-                class="absolute right-0 top-11 w-72 pixel-card mm-card p-4 z-[120]"
-                {...{ 'x-on:click.outside': 'open = false' }}
-              >
-                <p class="text-sm font-semibold mb-1">管理登录</p>
-                <p class="text-muted text-xs mb-3">AUTH_PASSWORD · KV 同步</p>
-                <input type="password" class="mm-input mb-2" placeholder="密码" x-model="$store.auth.password" {...{ 'x-on:keydown.enter.prevent': '$store.auth.login()' }} />
-                <p class="text-xs text-red-500 mb-2" x-show="$store.auth.error" x-text="$store.auth.error"></p>
-                <button type="button" class="mm-btn mm-btn-primary w-full" x-on:click="$store.auth.login().then(() => open = false)" x-bind:disabled="$store.auth.loading">确认</button>
-              </div>
-            </div>
-          </template>
-
           <template x-if="$store.auth.authenticated && $store.auth.authRequired">
-            <button type="button" class="pixel-button h-9 w-9 border-2 border-[color:rgba(137,110,96,0.45)]" x-on:click="$store.auth.logout()" title="退出">
+            <button type="button" class="pixel-button h-9 w-9 border-2 border-[color:rgba(137,110,96,0.45)]" x-on:click="$store.auth.logout()" title="退出登录">
               <i class="fas fa-right-from-bracket text-xs"></i>
             </button>
           </template>
@@ -94,7 +74,7 @@ export const Navbar = () => {
             <i class="fab fa-github"></i>
           </a>
           <button type="button" class="pixel-button h-9 w-9 border-2 border-[color:rgba(137,110,96,0.45)]" x-on:click="toggleDarkMode()" title="主题">
-            <i class="fas" x-bind:class="darkMode ? 'fa-sun' : 'fa-moon'"></i>
+            <i class="fas" x-bind:class={'darkMode ? "fa-sun" : "fa-moon"'}></i>
           </button>
         </div>
       </div>
