@@ -230,23 +230,50 @@ export const NodeLibrary = (props) => {
         async loadExportToken() {
           if (!this.authenticated) return;
           try {
+            // Prefer global store (already loaded on login as default long-lived token)
+            try {
+              const a = Alpine.store('auth');
+              if (a && a.exportToken) {
+                this.exportToken = a.exportToken;
+                this.exportSubUrl = a.exportSubUrl || (window.location.origin + '/api/nodes/subscription?token=' + encodeURIComponent(a.exportToken));
+                return;
+              }
+            } catch (e) {}
             const res = await fetch('/api/export-token', { headers: this.headers() });
             if (!res.ok) return;
             const data = await res.json();
             this.exportToken = data.token || '';
             this.exportSubUrl = data.subscriptionUrl || (window.location.origin + '/api/nodes/subscription?token=' + encodeURIComponent(this.exportToken));
+            try {
+              if (window.Alpine && Alpine.store('auth')) {
+                Alpine.store('auth').exportToken = this.exportToken;
+                Alpine.store('auth').exportSubUrl = this.exportSubUrl;
+              }
+              localStorage.setItem('sublink_export_token', this.exportToken);
+              localStorage.setItem('sublink_export_sub_url', this.exportSubUrl);
+            } catch (e) {}
           } catch (e) {}
         },
 
         async rotateExportToken() {
           if (!confirm('轮换导出 Token 后，旧订阅链接将立即失效，确定？')) return;
           try {
-            const res = await fetch('/api/export-token/rotate', { method: 'POST', headers: this.headers() });
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok) throw new Error(data.error || '轮换失败');
-            this.exportToken = data.token || '';
-            this.exportSubUrl = data.subscriptionUrl || '';
-            this.persistMessage('已生成新的长期导出 Token');
+            let ok = false;
+            try {
+              if (window.Alpine && Alpine.store('auth') && typeof Alpine.store('auth').rotateExportToken === 'function') {
+                ok = await Alpine.store('auth').rotateExportToken();
+                this.exportToken = Alpine.store('auth').exportToken || '';
+                this.exportSubUrl = Alpine.store('auth').exportSubUrl || '';
+              }
+            } catch (e) {}
+            if (!ok || !this.exportToken) {
+              const res = await fetch('/api/export-token/rotate', { method: 'POST', headers: this.headers() });
+              const data = await res.json().catch(() => ({}));
+              if (!res.ok) throw new Error(data.error || '轮换失败');
+              this.exportToken = data.token || '';
+              this.exportSubUrl = data.subscriptionUrl || '';
+            }
+            this.persistMessage('已更新默认长期订阅链接');
           } catch (e) {
             this.persistMessage(e.message || '轮换失败');
           }
@@ -412,20 +439,28 @@ export const NodeLibrary = (props) => {
         },
 
         subUrl() {
+          // Default: long-lived export token only (never fall back to login session)
+          try {
+            const a = Alpine.store('auth');
+            if (a && a.exportSubUrl) return a.exportSubUrl;
+            if (a && a.exportToken) {
+              return window.location.origin + '/api/nodes/subscription?token=' + encodeURIComponent(a.exportToken);
+            }
+          } catch (e) {}
           if (this.exportSubUrl) return this.exportSubUrl;
           if (this.exportToken) {
             return window.location.origin + '/api/nodes/subscription?token=' + encodeURIComponent(this.exportToken);
           }
-          // fallback (session — not long-lived)
-          const sess = this.token || (localStorage.getItem(TOKEN_KEY) || '');
-          const origin = window.location.origin;
-          if (!sess) return origin + '/api/nodes/subscription';
-          return origin + '/api/nodes/subscription?token=' + encodeURIComponent(sess);
+          return '';
         },
 
         copySubUrl() {
           const url = this.subUrl();
-          navigator.clipboard.writeText(url).then(() => this.persistMessage('已复制长期订阅链接（导出 Token）')).catch(() => {
+          if (!url) {
+            this.persistMessage('长期订阅尚未就绪，请稍候或刷新');
+            return;
+          }
+          navigator.clipboard.writeText(url).then(() => this.persistMessage('已复制默认长期订阅链接')).catch(() => {
             this.persistMessage(url);
           });
         },
@@ -593,15 +628,18 @@ export const NodeLibrary = (props) => {
         </div>
         <div class="card-content pt-4 space-y-4">
 
-        <div class="border-2 border-[var(--border)] p-3 space-y-2" x-show="authenticated && exportSubUrl">
+        <div class="border-2 border-[var(--border)] p-3 space-y-2" x-show="authenticated">
           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div>
-              <div class="mm-label mb-0">长期订阅链接（导出 Token）</div>
-              <p class="text-xs text-muted">与登录会话无关，退出登录后客户端仍可更新；泄露可点「轮换导出Token」作废</p>
+              <div class="mm-label mb-0">默认订阅链接（长期）</div>
+              <p class="text-xs text-muted">登录后自动创建 · 退出登录不影响客户端更新 · 仅「轮换」会作废</p>
             </div>
-            <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-on:click="copySubUrl()">复制链接</button>
+            <div class="flex flex-wrap gap-1.5">
+              <button type="button" class="mm-btn mm-btn-primary mm-btn-sm" x-on:click="copySubUrl()">复制长期订阅</button>
+              <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-on:click="rotateExportToken()">轮换</button>
+            </div>
           </div>
-          <input type="text" class="mm-input font-mono text-xs" readOnly x-bind:value="exportSubUrl" x-on:click="$el.select()" />
+          <input type="text" class="mm-input font-mono text-xs" readOnly x-bind:value="subUrl()" x-on:click="$el.select()" placeholder="登录后自动生成…" />
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-5 gap-3 mb-3">

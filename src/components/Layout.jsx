@@ -67,6 +67,9 @@ export const Layout = (props) => {
               password: '',
               error: '',
               nodeCount: 0,
+              // Long-lived export token (default for client subscriptions)
+              exportToken: localStorage.getItem('sublink_export_token') || '',
+              exportSubUrl: localStorage.getItem('sublink_export_sub_url') || '',
               async refresh() {
                 try {
                   const st = await fetch('/api/auth/status').then((r) => r.json());
@@ -93,11 +96,47 @@ export const Layout = (props) => {
                       }).then((r) => (r.ok ? r.json() : null));
                       if (sum) this.nodeCount = sum.enabled || sum.total || 0;
                     } catch (e) {}
+                    // Always ensure long-lived export token after login (default for clients)
+                    await this.ensureExportToken();
                   }
                 } catch (e) {
                   this.authenticated = !this.authRequired;
                 } finally {
                   this.ready = true;
+                }
+              },
+              async ensureExportToken() {
+                try {
+                  const headers = {};
+                  if (this.token) headers.Authorization = 'Bearer ' + this.token;
+                  const res = await fetch('/api/export-token', { headers });
+                  if (!res.ok) return;
+                  const data = await res.json();
+                  this.exportToken = data.token || '';
+                  this.exportSubUrl = data.subscriptionUrl || (window.location.origin + '/api/nodes/subscription?token=' + encodeURIComponent(this.exportToken));
+                  try {
+                    localStorage.setItem('sublink_export_token', this.exportToken);
+                    localStorage.setItem('sublink_export_sub_url', this.exportSubUrl);
+                  } catch (e) {}
+                } catch (e) {}
+              },
+              async rotateExportToken() {
+                try {
+                  const headers = {};
+                  if (this.token) headers.Authorization = 'Bearer ' + this.token;
+                  const res = await fetch('/api/export-token/rotate', { method: 'POST', headers });
+                  const data = await res.json().catch(() => ({}));
+                  if (!res.ok) throw new Error(data.error || '轮换失败');
+                  this.exportToken = data.token || '';
+                  this.exportSubUrl = data.subscriptionUrl || '';
+                  try {
+                    localStorage.setItem('sublink_export_token', this.exportToken);
+                    localStorage.setItem('sublink_export_sub_url', this.exportSubUrl);
+                  } catch (e) {}
+                  return true;
+                } catch (e) {
+                  this.error = e.message || '轮换失败';
+                  return false;
                 }
               },
               async login() {
@@ -133,6 +172,7 @@ export const Layout = (props) => {
                 } catch (e) {}
                 this.token = '';
                 localStorage.removeItem('sublink_auth_token');
+                // Keep exportToken/exportSubUrl so UI can still show the long-lived client URL after logout is not typical (gate hides app). Clear only session.
                 this.authenticated = !this.authRequired;
                 this.nodeCount = 0;
                 window.dispatchEvent(new CustomEvent('sublink-auth', { detail: { authenticated: this.authenticated } }));

@@ -165,16 +165,18 @@ export function createApp(bindings = {}) {
     });
 
     // Miaomiaowu-style: export saved enabled nodes as a plain subscription (one URI per line).
-    // Auth: login session (Bearer / ?token=session) OR long-lived export token (?token=export).
+    // Auth: prefer long-lived export token, then login session (Bearer / ?token=).
     app.get('/api/nodes/subscription', async (c) => {
         try {
             if (services.auth.isEnabled()) {
                 const token = extractBearerToken(c) || c.req.query('token') || '';
                 let ok = false;
                 if (token) {
-                    ok = await services.auth.validateToken(token);
-                    if (!ok && services.exportToken) {
+                    if (services.exportToken) {
                         ok = await services.exportToken.validate(token);
+                    }
+                    if (!ok) {
+                        ok = await services.auth.validateToken(token);
                     }
                 }
                 if (!ok) throw new UnauthorizedError();
