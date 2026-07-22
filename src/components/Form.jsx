@@ -482,10 +482,7 @@ export const Form = (props) => {
                 <button
                   type="button"
                   class="mm-btn mm-btn-outline mm-btn-sm"
-                  x-on:click="
-                    if (!confirm('轮换 Token 后旧链接立即失效？')) return;
-                    $store.auth.rotateExportToken().then((ok) => alert(ok ? '已轮换' : ($store.auth.error || '失败')));
-                  "
+                  x-on:click={'if (!confirm("轮换 Token 后旧链接立即失效？")) return; $store.auth.rotateExportToken().then((ok) => alert(ok ? "已轮换" : ($store.auth.error || "失败")));'}
                 >
                   轮换 Token
                 </button>

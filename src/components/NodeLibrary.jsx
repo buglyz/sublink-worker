@@ -14,7 +14,7 @@ export const NodeLibrary = (props) => {
       const PROTOCOLS = ['ss', 'ssr', 'vmess', 'vless', 'trojan', 'hysteria', 'hysteria2', 'hy2', 'tuic', 'socks', 'socks5', 'http', 'https', 'wireguard', 'snell', 'anytls'];
 
       const protocolOf = (line) => {
-        const m = String(line || '').trim().match(/^([a-z0-9+.-]+):\\/\\//i);
+        const m = String(line || '').trim().match(new RegExp('^([a-z0-9+.-]+)://', 'i'));
         return m ? m[1].toLowerCase() : 'unknown';
       };
 
@@ -352,7 +352,7 @@ export const NodeLibrary = (props) => {
 
         parseLines(text) {
           const lines = String(text || '')
-            .split(/\\r?\\n/)
+            .split(/\r?\n/)
             .map((l) => l.trim())
             .filter(Boolean)
             .filter((l) => !l.startsWith('#') && !l.startsWith('//'));
@@ -411,7 +411,7 @@ export const NodeLibrary = (props) => {
           }
           // Single http(s) URL line -> remote fetch import
           const only = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-          if (only.length === 1 && /^https?:\/\//i.test(only[0])) {
+          if (only.length === 1 && new RegExp('^https?://', 'i').test(only[0])) {
             this.remoteUrl = only[0];
             this.importRemoteUrl();
             return;
@@ -426,7 +426,7 @@ export const NodeLibrary = (props) => {
             return;
           }
           const url = String(this.remoteUrl || this.pasteBox || '').trim();
-          if (!/^https?:\/\//i.test(url)) {
+          if (!new RegExp('^https?://', 'i').test(url)) {
             this.persistMessage('请填写有效的 http(s) 订阅地址');
             return;
           }
@@ -701,7 +701,7 @@ export const NodeLibrary = (props) => {
               <div class="flex gap-2">
                 <input type="url" class="mm-input font-mono text-xs flex-1" x-model="remoteUrl" placeholder="https://example.com/sub" />
                 <button type="button" class="mm-btn mm-btn-secondary mm-btn-sm shrink-0" x-on:click="importRemoteUrl()" x-bind:disabled="importing">
-                  <i class="fas" x-bind:class="importing ? 'fa-spinner fa-spin' : 'fa-cloud-download-alt'"></i>
+                  <i class="fas" x-bind:class={'importing ? "fa-spinner fa-spin" : "fa-cloud-download-alt"'}></i>
                   <span x-text="importing ? '导入中…' : '拉取导入'"></span>
                 </button>
               </div>
