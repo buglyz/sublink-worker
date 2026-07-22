@@ -4,9 +4,9 @@
 import { TextareaWithActions } from './TextareaWithActions.jsx';
 
 const DEFAULT_ACTION_CLASS =
-  'px-2 py-1 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded transition-colors flex items-center gap-1';
+  'px-2.5 py-1 text-xs font-medium bg-surface-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 rounded-lg border border-transparent hover:border-surface-200 dark:hover:border-white/10 transition-colors flex items-center gap-1';
 const DEFAULT_VALIDATE_CLASS =
-  'px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-xs font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors flex items-center gap-1';
+  'px-3 py-1.5 bg-white dark:bg-surface-850 border border-surface-200 dark:border-white/10 text-gray-700 dark:text-gray-200 rounded-lg text-xs font-medium hover:border-brand-400/50 hover:text-brand-700 dark:hover:text-brand-300 transition-colors flex items-center gap-1.5 shadow-sm';
 
 const createAction = (action = {}, defaults = {}) => {
   const final = {
@@ -67,7 +67,7 @@ export const ValidatedTextarea = (props) => {
           hideLabelOnMobile: pasteConfig.hideLabelOnMobile !== false,
           className:
             pasteConfig.className ||
-            `${DEFAULT_ACTION_CLASS} hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400`,
+            `${DEFAULT_ACTION_CLASS} hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:text-brand-700 dark:hover:text-brand-300`,
           title: pasteConfig.title || pasteTitle,
           attrs:
             pasteConfig.attrs || {
@@ -90,7 +90,7 @@ export const ValidatedTextarea = (props) => {
           hideLabelOnMobile: clearConfig.hideLabelOnMobile !== false,
           className:
             clearConfig.className ||
-            `${DEFAULT_ACTION_CLASS} hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400`,
+            `${DEFAULT_ACTION_CLASS} hover:bg-rose-50 dark:hover:bg-rose-900/20 hover:text-rose-600 dark:hover:text-rose-400`,
           title: clearConfig.title || clearTitle,
           attrs:
             clearConfig.attrs || {
@@ -123,12 +123,12 @@ export const ValidatedTextarea = (props) => {
       {children}
       {renderValidationMessage(
         validation?.error,
-        'mt-2 text-red-500 text-sm flex items-center gap-1',
+        'mt-2 text-rose-500 text-sm flex items-center gap-1.5',
         'fas fa-exclamation-circle'
       )}
       {renderValidationMessage(
         validation?.success,
-        'mt-2 text-green-500 text-sm flex items-center gap-1',
+        'mt-2 text-emerald-500 text-sm flex items-center gap-1.5',
         'fas fa-check-circle'
       )}
     </TextareaWithActions>

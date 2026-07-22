@@ -14,11 +14,11 @@ export const TextareaWithActions = (props) => {
     variant = 'default',
     containerClass = '',
     textareaClass = '',
-    labelWrapperClass = 'flex items-center justify-between mb-2',
+    labelWrapperClass = 'flex items-center justify-between mb-3',
     labelActions = [],
-    labelActionsWrapperClass = 'flex gap-2',
+    labelActionsWrapperClass = 'flex gap-1.5',
     inlineActions = [],
-    inlineActionsWrapperClass = 'flex gap-2 absolute bottom-4 right-4',
+    inlineActionsWrapperClass = 'flex gap-2 absolute bottom-3 right-3',
     textareaAttrs = {},
     preserveLabelSpace = true,
     children
@@ -36,8 +36,10 @@ export const TextareaWithActions = (props) => {
   }
 
   const classNames = [
-    'w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 resize-y placeholder-gray-400 dark:placeholder-gray-500',
-    variant === 'mono' ? 'font-mono text-sm bg-gray-50 dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-900',
+    'w-full px-4 py-3 rounded-xl border border-surface-200 dark:border-white/10 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500/50 transition-all duration-200 resize-y placeholder-gray-400 dark:placeholder-gray-500',
+    variant === 'mono'
+      ? 'font-mono text-sm bg-surface-50 dark:bg-black/25'
+      : 'bg-surface-50/80 dark:bg-black/20',
     textareaClass
   ]
     .filter(Boolean)
@@ -87,7 +89,7 @@ export const TextareaWithActions = (props) => {
           {hasLabelContent ? (
             <label
               for={id}
-              class="block text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2"
+              class="block text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2.5"
             >
               {labelPrefix}
               {label}

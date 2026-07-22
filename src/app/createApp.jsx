@@ -48,18 +48,23 @@ export function createApp(bindings = {}) {
                 <div class="flex flex-col min-h-screen">
                     <Navbar />
                     <main class="flex-1">
-                        <div class="container mx-auto px-4 py-8 pt-24">
-                            <div class="max-w-4xl mx-auto">
-                                <div class="text-center mb-12 pt-8">
-                                    <h1 class="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4 tracking-tight">
-                                        {APP_NAME}
-                                    </h1>
-                                    <p class="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-                                        {subtitle}
-                                    </p>
+                        <div class="mx-auto max-w-5xl px-4 sm:px-6 pt-20 pb-10">
+                            <header class="mb-10 pt-8 sm:pt-10">
+                                <div class="flex flex-wrap items-center gap-2 mb-4">
+                                    <span class="ui-chip">
+                                        <i class="fas fa-bolt text-brand-600 dark:text-brand-400 text-[10px]"></i>
+                                        Worker · Vercel · Docker
+                                    </span>
+                                    <span class="ui-chip">Sing-Box · Clash · Surge · Xray</span>
                                 </div>
-                                <Form t={t} lang={lang} />
-                            </div>
+                                <h1 class="text-3xl sm:text-4xl md:text-[2.65rem] font-bold tracking-tight text-gray-900 dark:text-white leading-[1.15]">
+                                    {APP_NAME}
+                                </h1>
+                                <p class="mt-3 max-w-2xl text-base sm:text-lg text-gray-600 dark:text-gray-400 leading-relaxed">
+                                    {subtitle}
+                                </p>
+                            </header>
+                            <Form t={t} lang={lang} />
                         </div>
                     </main>
                     <Footer />
