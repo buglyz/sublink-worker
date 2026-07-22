@@ -21,6 +21,10 @@ export const Navbar = () => {
             <i class="fas fa-bolt text-xs opacity-70"></i>
             生成
           </a>
+          <a href="#nodes" class="mm-btn mm-btn-ghost px-3 py-1.5 text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
+            <i class="fas fa-network-wired text-xs opacity-70"></i>
+            节点
+          </a>
           <a href="#results" class="mm-btn mm-btn-ghost px-3 py-1.5 text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
             <i class="fas fa-link text-xs opacity-70"></i>
             订阅

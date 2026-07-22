@@ -3,6 +3,7 @@
 import { PREDEFINED_RULE_SETS, UNIFIED_RULES } from '../config/index.js';
 import { listTemplateDetails } from '../templates/index.js';
 import { CustomRules } from './CustomRules.jsx';
+import { NodeLibrary } from './NodeLibrary.jsx';
 import { formLogicFn } from './formLogic.js';
 
 const LINK_FIELDS = [
@@ -104,6 +105,15 @@ export const Form = (props) => {
                   <i class="fas" x-bind:class="loading ? 'fa-spinner fa-spin' : 'fa-bolt'"></i>
                   <span x-text="loading ? processingText : convertText">{t('convert')}</span>
                 </button>
+                <button
+                  type="button"
+                  class="mm-btn mm-btn-secondary py-2.5"
+                  title="保存当前输入到节点库"
+                  x-on:click="window.dispatchEvent(new CustomEvent('nodes-import-from-input')); document.getElementById('nodes')?.scrollIntoView({behavior:'smooth',block:'nearest'})"
+                >
+                  <i class="fas fa-bookmark text-xs"></i>
+                  存节点
+                </button>
                 <button type="button" class="mm-btn mm-btn-ghost py-2.5" x-on:click="clearAll()">
                   <i class="fas fa-trash-alt text-xs"></i>
                   {t('clear')}
@@ -178,6 +188,8 @@ export const Form = (props) => {
 
           {/* Right: config console */}
           <section class="xl:col-span-7 space-y-5">
+            <NodeLibrary t={t} />
+
             {/* Template */}
             <div class="mm-card p-4 sm:p-5">
               <div class="mm-section-head">
