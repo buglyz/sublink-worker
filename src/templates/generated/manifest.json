@@ -1,0 +1,349 @@
+{
+  "generatedAt": "2026-07-22T08:13:52.245Z",
+  "ok": 38,
+  "fail": 0,
+  "templates": [
+    {
+      "id": "Custom_Clash",
+      "fileId": "Custom_Clash",
+      "label": "Aethersailor - 标准 (推荐使用)",
+      "source": "acl-ini",
+      "groups": 35,
+      "rules": 45,
+      "providers": 6
+    },
+    {
+      "id": "Custom_Clash_Full",
+      "fileId": "Custom_Clash_Full",
+      "label": "Aethersailor - 全分组 (节点较多)",
+      "source": "acl-ini",
+      "groups": 50,
+      "rules": 50,
+      "providers": 6
+    },
+    {
+      "id": "Custom_Clash_GFW",
+      "fileId": "Custom_Clash_GFW",
+      "label": "Aethersailor - 极简 (GFW)",
+      "source": "acl-ini",
+      "groups": 3,
+      "rules": 5,
+      "providers": 0
+    },
+    {
+      "id": "Custom_Clash_Lite",
+      "fileId": "Custom_Clash_Lite",
+      "label": "Aethersailor - 轻量 (国内直连，国外代理)",
+      "source": "acl-ini",
+      "groups": 19,
+      "rules": 25,
+      "providers": 6
+    },
+    {
+      "id": "sublinkPro作者自用",
+      "fileId": "sublinkPro",
+      "label": "sublinkPro作者自用 - 不区分国家",
+      "source": "acl-ini",
+      "groups": 24,
+      "rules": 33,
+      "providers": 31
+    },
+    {
+      "id": "ACL4SSR",
+      "fileId": "ACL4SSR",
+      "label": "标准版 - 典型分组",
+      "source": "acl-ini",
+      "groups": 10,
+      "rules": 14,
+      "providers": 12
+    },
+    {
+      "id": "ACL4SSR_AdblockPlus",
+      "fileId": "ACL4SSR_AdblockPlus",
+      "label": "标准版 - 典型分组+去广告",
+      "source": "acl-ini",
+      "groups": 11,
+      "rules": 17,
+      "providers": 15
+    },
+    {
+      "id": "ACL4SSR_BackCN",
+      "fileId": "ACL4SSR_BackCN",
+      "label": "回国版 - 回国专用",
+      "source": "acl-ini",
+      "groups": 5,
+      "rules": 11,
+      "providers": 9
+    },
+    {
+      "id": "ACL4SSR_Mini",
+      "fileId": "ACL4SSR_Mini",
+      "label": "精简版 - 少量分组",
+      "source": "acl-ini",
+      "groups": 5,
+      "rules": 12,
+      "providers": 10
+    },
+    {
+      "id": "ACL4SSR_Mini_Fallback",
+      "fileId": "ACL4SSR_Mini_Fallback",
+      "label": "精简版 - 故障转移",
+      "source": "acl-ini",
+      "groups": 6,
+      "rules": 12,
+      "providers": 10
+    },
+    {
+      "id": "ACL4SSR_Mini_MultiMode",
+      "fileId": "ACL4SSR_Mini_MultiMode",
+      "label": "精简版 - 多模式 (自动/手动)",
+      "source": "acl-ini",
+      "groups": 7,
+      "rules": 12,
+      "providers": 10
+    },
+    {
+      "id": "ACL4SSR_Mini_NoAuto",
+      "fileId": "ACL4SSR_Mini_NoAuto",
+      "label": "精简版 - 无自动测速",
+      "source": "acl-ini",
+      "groups": 4,
+      "rules": 12,
+      "providers": 10
+    },
+    {
+      "id": "ACL4SSR_NoApple",
+      "fileId": "ACL4SSR_NoApple",
+      "label": "无苹果 - 无苹果分流",
+      "source": "acl-ini",
+      "groups": 9,
+      "rules": 14,
+      "providers": 12
+    },
+    {
+      "id": "ACL4SSR_NoAuto",
+      "fileId": "ACL4SSR_NoAuto",
+      "label": "无测速 - 无自动测速",
+      "source": "acl-ini",
+      "groups": 9,
+      "rules": 14,
+      "providers": 12
+    },
+    {
+      "id": "ACL4SSR_NoAuto_NoApple",
+      "fileId": "ACL4SSR_NoAuto_NoApple",
+      "label": "无测速&苹果 - 无测速&无苹果分流",
+      "source": "acl-ini",
+      "groups": 8,
+      "rules": 14,
+      "providers": 12
+    },
+    {
+      "id": "ACL4SSR_NoAuto_NoApple_NoMicrosoft",
+      "fileId": "ACL4SSR_NoAuto_NoApple_NoMicrosoft",
+      "label": "无测速&苹果&微软 - 无测速&无苹果&无微软分流",
+      "source": "acl-ini",
+      "groups": 7,
+      "rules": 13,
+      "providers": 11
+    },
+    {
+      "id": "ACL4SSR_NoMicrosoft",
+      "fileId": "ACL4SSR_NoMicrosoft",
+      "label": "无微软 - 无微软分流",
+      "source": "acl-ini",
+      "groups": 9,
+      "rules": 13,
+      "providers": 11
+    },
+    {
+      "id": "ACL4SSR_Online",
+      "fileId": "ACL4SSR_Online",
+      "label": "在线版 - 典型分组",
+      "source": "acl-ini",
+      "groups": 11,
+      "rules": 16,
+      "providers": 14
+    },
+    {
+      "id": "ACL4SSR_Online_AdblockPlus",
+      "fileId": "ACL4SSR_Online_AdblockPlus",
+      "label": "在线版 - 典型分组+去广告",
+      "source": "acl-ini",
+      "groups": 12,
+      "rules": 19,
+      "providers": 17
+    },
+    {
+      "id": "ACL4SSR_Online_Full",
+      "fileId": "ACL4SSR_Online_Full",
+      "label": "在线全分组 - 比较全",
+      "source": "acl-ini",
+      "groups": 29,
+      "rules": 33,
+      "providers": 31
+    },
+    {
+      "id": "ACL4SSR_Online_Full_AdblockPlus",
+      "fileId": "ACL4SSR_Online_Full_AdblockPlus",
+      "label": "在线全分组 - 带广告拦截",
+      "source": "acl-ini",
+      "groups": 33,
+      "rules": 37,
+      "providers": 35
+    },
+    {
+      "id": "ACL4SSR_Online_Full_Google",
+      "fileId": "ACL4SSR_Online_Full_Google",
+      "label": "在线全分组 - 谷歌分流",
+      "source": "acl-ini",
+      "groups": 33,
+      "rules": 36,
+      "providers": 32
+    },
+    {
+      "id": "ACL4SSR_Online_Full_MultiMode",
+      "fileId": "ACL4SSR_Online_Full_MultiMode",
+      "label": "在线全分组 - 多模式",
+      "source": "acl-ini",
+      "groups": 31,
+      "rules": 33,
+      "providers": 31
+    },
+    {
+      "id": "ACL4SSR_Online_Full_Netflix",
+      "fileId": "ACL4SSR_Online_Full_Netflix",
+      "label": "在线全分组 - 奈飞分流",
+      "source": "acl-ini",
+      "groups": 31,
+      "rules": 34,
+      "providers": 32
+    },
+    {
+      "id": "ACL4SSR_Online_Full_NoAuto",
+      "fileId": "ACL4SSR_Online_Full_NoAuto",
+      "label": "在线全分组 - 无自动测速",
+      "source": "acl-ini",
+      "groups": 28,
+      "rules": 33,
+      "providers": 31
+    },
+    {
+      "id": "ACL4SSR_Online_Mini",
+      "fileId": "ACL4SSR_Online_Mini",
+      "label": "在线精简版 - 少量分组",
+      "source": "acl-ini",
+      "groups": 5,
+      "rules": 13,
+      "providers": 11
+    },
+    {
+      "id": "ACL4SSR_Online_Mini_AdblockPlus",
+      "fileId": "ACL4SSR_Online_Mini_AdblockPlus",
+      "label": "在线精简版 - 带广告拦截",
+      "source": "acl-ini",
+      "groups": 5,
+      "rules": 14,
+      "providers": 12
+    },
+    {
+      "id": "ACL4SSR_Online_Mini_Ai",
+      "fileId": "ACL4SSR_Online_Mini_Ai",
+      "label": "在线精简版 - AI",
+      "source": "acl-ini",
+      "groups": 6,
+      "rules": 15,
+      "providers": 13
+    },
+    {
+      "id": "ACL4SSR_Online_Mini_Fallback",
+      "fileId": "ACL4SSR_Online_Mini_Fallback",
+      "label": "在线精简版 - 故障转移",
+      "source": "acl-ini",
+      "groups": 6,
+      "rules": 13,
+      "providers": 11
+    },
+    {
+      "id": "ACL4SSR_Online_Mini_MultiCountry",
+      "fileId": "ACL4SSR_Online_Mini_MultiCountry",
+      "label": "在线精简版 - 多国家",
+      "source": "acl-ini",
+      "groups": 10,
+      "rules": 13,
+      "providers": 11
+    },
+    {
+      "id": "ACL4SSR_Online_Mini_MultiMode",
+      "fileId": "ACL4SSR_Online_Mini_MultiMode",
+      "label": "在线精简版 - 多模式",
+      "source": "acl-ini",
+      "groups": 7,
+      "rules": 13,
+      "providers": 11
+    },
+    {
+      "id": "ACL4SSR_Online_Mini_NoAuto",
+      "fileId": "ACL4SSR_Online_Mini_NoAuto",
+      "label": "在线精简版 - 无自动测速",
+      "source": "acl-ini",
+      "groups": 4,
+      "rules": 13,
+      "providers": 11
+    },
+    {
+      "id": "ACL4SSR_Online_MultiCountry",
+      "fileId": "ACL4SSR_Online_MultiCountry",
+      "label": "在线版 - 多国家",
+      "source": "acl-ini",
+      "groups": 17,
+      "rules": 18,
+      "providers": 16
+    },
+    {
+      "id": "ACL4SSR_Online_NoAuto",
+      "fileId": "ACL4SSR_Online_NoAuto",
+      "label": "在线版 - 无自动测速",
+      "source": "acl-ini",
+      "groups": 10,
+      "rules": 16,
+      "providers": 14
+    },
+    {
+      "id": "ACL4SSR_Online_NoReject",
+      "fileId": "ACL4SSR_Online_NoReject",
+      "label": "在线版 - 无拒绝规则",
+      "source": "acl-ini",
+      "groups": 9,
+      "rules": 13,
+      "providers": 11
+    },
+    {
+      "id": "ACL4SSR_WithChinaIp",
+      "fileId": "ACL4SSR_WithChinaIp",
+      "label": "特殊版 - 包含回国IP",
+      "source": "acl-ini",
+      "groups": 10,
+      "rules": 14,
+      "providers": 13
+    },
+    {
+      "id": "ACL4SSR_WithChinaIp_WithGFW",
+      "fileId": "ACL4SSR_WithChinaIp_WithGFW",
+      "label": "特殊版 - 包含回国IP&GFW列表",
+      "source": "acl-ini",
+      "groups": 10,
+      "rules": 15,
+      "providers": 13
+    },
+    {
+      "id": "ACL4SSR_WithGFW",
+      "fileId": "ACL4SSR_WithGFW",
+      "label": "特殊版 - 包含GFW列表",
+      "source": "acl-ini",
+      "groups": 10,
+      "rules": 14,
+      "providers": 12
+    }
+  ]
+}

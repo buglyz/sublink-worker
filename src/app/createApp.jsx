@@ -8,6 +8,7 @@ import { Footer } from '../components/Footer.jsx';
 import { UpdateChecker } from '../components/UpdateChecker.jsx';
 import { SingboxConfigBuilder } from '../builders/SingboxConfigBuilder.js';
 import { ClashConfigBuilder } from '../builders/ClashConfigBuilder.js';
+import { TemplateClashBuilder, listTemplates, listTemplateDetails } from '../builders/TemplateClashBuilder.js';
 import { SurgeConfigBuilder } from '../builders/SurgeConfigBuilder.js';
 import { createTranslator, resolveLanguage } from '../i18n/index.js';
 import { encodeBase64, tryDecodeSubscriptionLines } from '../utils.js';
@@ -131,16 +132,33 @@ export function createApp(bindings = {}) {
                 return c.text('Missing config parameter', 400);
             }
 
+            const templateId = c.req.query('template') || c.req.query('rule_template');
+            const ua = c.req.query('ua') || getRequestHeader(c.req, 'User-Agent') || DEFAULT_USER_AGENT;
+            const lang = c.get('lang');
+
+            // V3 full-YAML template path (miaomiaowu-style rule mode)
+            if (templateId) {
+                const builder = new TemplateClashBuilder(config, templateId, {
+                    lang,
+                    userAgent: ua,
+                });
+                await builder.build();
+                const userinfo = builder.getSubscriptionUserinfo();
+                const headers = { 'Content-Type': 'text/yaml; charset=utf-8' };
+                if (userinfo) {
+                    headers['subscription-userinfo'] = userinfo;
+                }
+                return c.text(builder.formatConfig(), 200, headers);
+            }
+
             const selectedRules = parseSelectedRules(c.req.query('selectedRules'));
             const customRules = parseJsonArray(c.req.query('customRules'));
-            const ua = c.req.query('ua') || getRequestHeader(c.req, 'User-Agent') || DEFAULT_USER_AGENT;
             const groupByCountry = parseBooleanFlag(c.req.query('group_by_country'));
             const includeAutoSelect = c.req.query('include_auto_select') !== 'false';
             const enableClashUI = parseBooleanFlag(c.req.query('enable_clash_ui'));
             const externalController = c.req.query('external_controller');
             const externalUiDownloadUrl = c.req.query('external_ui_download_url');
             const configId = c.req.query('configId');
-            const lang = c.get('lang');
 
             let baseConfig;
             if (configId) {
@@ -171,6 +189,17 @@ export function createApp(bindings = {}) {
         } catch (error) {
             return handleError(c, error, runtime.logger);
         }
+    });
+
+    app.get('/templates', (c) => {
+        return c.json({
+            templates: listTemplateDetails().map((t) => ({
+                id: t.id,
+                label: t.label,
+                source: t.source,
+                description: t.label,
+            })),
+        });
     });
 
     app.get('/surge', async (c) => {
@@ -474,14 +503,31 @@ function isSingboxLegacyConfig(version) {
     return version.minor < 12;
 }
 
+// 1.14 swaps rule-set download_detour for http_client, which older clients
+// reject as an unknown field, so it needs its own config tier.
+function isSingboxModernConfig(version) {
+    if (!version || Number.isNaN(version.major) || Number.isNaN(version.minor)) {
+        return false;
+    }
+    if (version.major !== 1) {
+        return version.major > 1;
+    }
+    return version.minor >= 14;
+}
+
+function resolveSingboxConfigTier(version) {
+    if (isSingboxLegacyConfig(version)) return '1.11';
+    return isSingboxModernConfig(version) ? '1.14' : '1.12';
+}
+
 function resolveSingboxConfigVersion(requestedVersion, userAgent) {
     const normalizedRequested = typeof requestedVersion === 'string' ? requestedVersion.trim().toLowerCase() : '';
     if (normalizedRequested && normalizedRequested !== 'auto') {
         if (normalizedRequested === 'legacy') return '1.11';
-        if (normalizedRequested === 'latest') return '1.12';
+        if (normalizedRequested === 'latest') return '1.14';
         const parsed = parseSemverLike(normalizedRequested);
         if (parsed) {
-            return isSingboxLegacyConfig(parsed) ? '1.11' : '1.12';
+            return resolveSingboxConfigTier(parsed);
         }
     }
 
@@ -490,7 +536,7 @@ function resolveSingboxConfigVersion(requestedVersion, userAgent) {
         const versionString = uaMatch?.[1];
         const parsed = versionString ? parseSemverLike(versionString) : null;
         if (parsed) {
-            return isSingboxLegacyConfig(parsed) ? '1.11' : '1.12';
+            return resolveSingboxConfigTier(parsed);
         }
     }
 
