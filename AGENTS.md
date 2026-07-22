@@ -12,6 +12,8 @@
 
 Sublink Worker 是多平台代理订阅转换器：将各类协议（ShadowSocks/VMess/VLESS/Hysteria2/Trojan/TUIC）转为客户端配置（Sing-Box/Clash/Xray/Surge）。同一份代码跑在 Cloudflare Workers / Node.js / Vercel / Docker 上。技术栈：Hono（Web/JSX SSR）+ Vitest + Wrangler + esbuild + ioredis。
 
+本仓库在上游 sublink-worker 之上增加了「妙妙屋风格」的节点库与**订阅管理**（KV 持久化、可编辑节点集合、默认 Clash YAML 导出）。详见根目录 `README.md`。
+
 ## 常用命令
 
 - `npm run dev` — Wrangler 本地开发（Cloudflare Workers 入口）
