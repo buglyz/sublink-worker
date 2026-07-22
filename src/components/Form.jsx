@@ -99,24 +99,24 @@ export const Form = (props) => {
                   <button
                     type="button"
                     class="mm-btn flex-1"
-                    x-on:click="accordionSections.rules = true; selectedTemplate = ''; accordionSections.template = false"
-                    x-bind:class="!selectedTemplate ? 'mm-btn-primary' : 'mm-btn-outline'"
+                    x-on:click="setRuleMode('custom')"
+                    x-bind:class="ruleMode === 'custom' ? 'mm-btn-primary' : 'mm-btn-outline'"
                   >
                     自定义规则
                   </button>
                   <button
                     type="button"
                     class="mm-btn flex-1"
-                    x-on:click="accordionSections.template = true; accordionSections.rules = false"
-                    x-bind:class="selectedTemplate ? 'mm-btn-primary' : 'mm-btn-outline'"
+                    x-on:click="setRuleMode('template')"
+                    x-bind:class="ruleMode === 'template' ? 'mm-btn-primary' : 'mm-btn-outline'"
                   >
                     使用模板
                   </button>
                 </div>
               </div>
 
-              {/* 模板模式 */}
-              <div class="space-y-3" x-show="selectedTemplate || accordionSections.template">
+              {/* 模板模式：点击「使用模板」立即展开列表，不展示规则选择 */}
+              <div class="space-y-3" x-show="ruleMode === 'template'" x-cloak>
                 <div class="space-y-1">
                   <label class="mm-label" for="template-select">{t('clashTemplate')}</label>
                   <p class="text-muted text-sm">{t('clashTemplateHint')}</p>
@@ -140,10 +140,13 @@ export const Form = (props) => {
                   </optgroup>
                 </select>
                 <p class="text-sm text-[var(--primary)]" x-show="selectedTemplate" x-text="templateLabel()"></p>
+                <p class="text-sm text-amber-700 dark:text-amber-400" x-show="!selectedTemplate">
+                  请从列表中选择一个 Clash 模板（未选时仍可转换，但不会套用模板规则）。
+                </p>
               </div>
 
-              {/* 自定义规则勾选 */}
-              <div class="space-y-3" x-show="!selectedTemplate">
+              {/* 自定义规则勾选：仅自定义模式显示 */}
+              <div class="space-y-3" x-show="ruleMode === 'custom'" x-cloak>
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <label class="mm-label mb-0">{t('ruleSelection')}</label>
                   <select

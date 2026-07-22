@@ -85,6 +85,8 @@ export const formLogicFn = (t) => {
             selectedRules: [],
             selectedPredefinedRule: 'balanced',
             selectedTemplate: '',
+            // 'custom' | 'template' — UI mode for rule section (miaomiaowu-style)
+            ruleMode: 'custom',
             subconverterCopied: false,
             groupByCountry: false,
             includeAutoSelect: true,
@@ -143,6 +145,9 @@ export const formLogicFn = (t) => {
                 this.configType = localStorage.getItem('configType') || 'singbox';
                 this.customShortCode = localStorage.getItem('customShortCode') || '';
                 this.selectedTemplate = localStorage.getItem('selectedTemplate') || '';
+                this.ruleMode = localStorage.getItem('ruleMode') === 'template' || this.selectedTemplate
+                    ? 'template'
+                    : 'custom';
                 const initialUrlParams = new URLSearchParams(window.location.search);
                 this.currentConfigId = initialUrlParams.get('configId') || '';
 
@@ -171,7 +176,11 @@ export const formLogicFn = (t) => {
                 this.$watch('externalController', val => localStorage.setItem('externalController', val));
                 this.$watch('externalUiDownloadUrl', val => localStorage.setItem('externalUiDownloadUrl', val));
                 this.$watch('customUA', val => localStorage.setItem('userAgent', val));
-                this.$watch('selectedTemplate', val => localStorage.setItem('selectedTemplate', val || ''));
+                this.$watch('selectedTemplate', val => {
+                    localStorage.setItem('selectedTemplate', val || '');
+                    if (val) this.ruleMode = 'template';
+                });
+                this.$watch('ruleMode', val => localStorage.setItem('ruleMode', val || 'custom'));
                 this.$watch('configEditor', val => {
                     localStorage.setItem('configEditor', val);
                     this.resetConfigValidation();
@@ -186,6 +195,19 @@ export const formLogicFn = (t) => {
 
             toggleAccordion(section) {
                 this.accordionSections[section] = !this.accordionSections[section];
+            },
+
+            setRuleMode(mode) {
+                this.ruleMode = mode === 'template' ? 'template' : 'custom';
+                if (this.ruleMode === 'custom') {
+                    // Leave template selection empty so convert uses selectedRules
+                    this.selectedTemplate = '';
+                    this.accordionSections.template = false;
+                    this.accordionSections.rules = true;
+                } else {
+                    this.accordionSections.template = true;
+                    this.accordionSections.rules = false;
+                }
             },
 
             applyPredefinedRule() {
