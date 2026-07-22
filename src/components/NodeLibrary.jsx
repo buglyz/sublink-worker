@@ -365,11 +365,9 @@ export const NodeLibrary = (props) => {
               data.input = text;
               if (convert && typeof data.submitForm === 'function') {
                 data.submitForm();
-                try { Alpine.store('ui')?.setPage('subscribe'); } catch {}
-                try { window.__SUBLINK_UI__?.setPage?.('subscribe'); } catch {}
+                try { window.__SUBLINK_UI__.setPage('subscribe'); } catch (e) {}
               } else {
-                try { Alpine.store('ui')?.setPage('generate'); } catch {}
-                try { window.__SUBLINK_UI__?.setPage?.('generate'); } catch {}
+                try { window.__SUBLINK_UI__.setPage('generate'); } catch (e) {}
               }
               this.persistMessage(convert ? '已用选中节点生成订阅' : '已填入转换输入框');
               return;
