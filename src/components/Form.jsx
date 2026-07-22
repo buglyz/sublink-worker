@@ -115,33 +115,97 @@ export const Form = (props) => {
                 </div>
               </div>
 
-              {/* 模板模式：点击「使用模板」立即展开列表，不展示规则选择 */}
-              <div class="space-y-3" x-show="ruleMode === 'template'" x-cloak>
-                <div class="space-y-1">
-                  <label class="mm-label" for="template-select">{t('clashTemplate')}</label>
-                  <p class="text-muted text-sm">{t('clashTemplateHint')}</p>
+              {/* 模板模式：卡片网格直接展示全部模板 */}
+              <div class="space-y-4" x-show="ruleMode === 'template'" x-cloak>
+                <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
+                  <div class="space-y-1">
+                    <label class="mm-label mb-0">{t('clashTemplate')}</label>
+                    <p class="text-muted text-sm">{t('clashTemplateHint')}</p>
+                  </div>
+                  <button
+                    type="button"
+                    class="mm-btn mm-btn-outline mm-btn-sm self-start"
+                    x-on:click="selectedTemplate = ''"
+                    x-show="selectedTemplate"
+                  >
+                    <i class="fas fa-times text-[10px]"></i>
+                    清除选择
+                  </button>
                 </div>
-                <select id="template-select" x-model="selectedTemplate" class="mm-select">
-                  <option value="">{t('clashTemplateNone')}</option>
-                  <optgroup label={t('clashTemplateGroupV3')}>
-                    {templateGroups.v3.map((tpl) => (
-                      <option value={tpl.id}>{tpl.label}</option>
-                    ))}
-                  </optgroup>
-                  <optgroup label={t('clashTemplateGroupAethersailor')}>
-                    {templateGroups.aethersailor.map((tpl) => (
-                      <option value={tpl.id}>{tpl.label}</option>
-                    ))}
-                  </optgroup>
-                  <optgroup label={t('clashTemplateGroupAcl4ssr')}>
-                    {templateGroups.acl4ssr.map((tpl) => (
-                      <option value={tpl.id}>{tpl.label}</option>
-                    ))}
-                  </optgroup>
-                </select>
-                <p class="text-sm text-[var(--primary)]" x-show="selectedTemplate" x-text="templateLabel()"></p>
+
+                <div class="space-y-4">
+                  <div class="space-y-2">
+                    <div class="text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
+                      {t('clashTemplateGroupV3')}
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {templateGroups.v3.map((tpl) => (
+                        <button
+                          type="button"
+                          class="mm-btn mm-btn-outline w-full justify-start text-left h-auto py-3 px-3 whitespace-normal"
+                          data-tpl={tpl.id}
+                          x-on:click="selectedTemplate = $el.dataset.tpl"
+                          x-bind:class={`selectedTemplate === '${tpl.id}' ? 'mm-btn-primary border-[color:rgba(217,119,87,0.55)]' : ''`}
+                        >
+                          <span class="flex flex-col items-start gap-0.5 min-w-0">
+                            <span class="font-semibold text-sm leading-snug">{tpl.label}</span>
+                            <span class="font-mono text-[10px] opacity-70 truncate max-w-full">{tpl.id}</span>
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div class="space-y-2">
+                    <div class="text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
+                      {t('clashTemplateGroupAethersailor')}
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {templateGroups.aethersailor.map((tpl) => (
+                        <button
+                          type="button"
+                          class="mm-btn mm-btn-outline w-full justify-start text-left h-auto py-3 px-3 whitespace-normal"
+                          data-tpl={tpl.id}
+                          x-on:click="selectedTemplate = $el.dataset.tpl"
+                          x-bind:class={`selectedTemplate === '${tpl.id}' ? 'mm-btn-primary border-[color:rgba(217,119,87,0.55)]' : ''`}
+                        >
+                          <span class="flex flex-col items-start gap-0.5 min-w-0">
+                            <span class="font-semibold text-sm leading-snug">{tpl.label}</span>
+                            <span class="font-mono text-[10px] opacity-70 truncate max-w-full">{tpl.id}</span>
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div class="space-y-2">
+                    <div class="text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
+                      {t('clashTemplateGroupAcl4ssr')}
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[22rem] overflow-y-auto pr-1">
+                      {templateGroups.acl4ssr.map((tpl) => (
+                        <button
+                          type="button"
+                          class="mm-btn mm-btn-outline w-full justify-start text-left h-auto py-2.5 px-3 whitespace-normal"
+                          data-tpl={tpl.id}
+                          x-on:click="selectedTemplate = $el.dataset.tpl"
+                          x-bind:class={`selectedTemplate === '${tpl.id}' ? 'mm-btn-primary border-[color:rgba(217,119,87,0.55)]' : ''`}
+                        >
+                          <span class="flex flex-col items-start gap-0.5 min-w-0">
+                            <span class="font-semibold text-sm leading-snug">{tpl.label}</span>
+                            <span class="font-mono text-[10px] opacity-70 truncate max-w-full">{tpl.id}</span>
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <p class="text-sm text-[var(--primary)]" x-show="selectedTemplate">
+                  已选：<span class="font-medium" x-text="templateLabel()"></span>
+                </p>
                 <p class="text-sm text-amber-700 dark:text-amber-400" x-show="!selectedTemplate">
-                  请从列表中选择一个 Clash 模板（未选时仍可转换，但不会套用模板规则）。
+                  请点选上方模板（未选时仍可转换，但不会套用模板规则）。
                 </p>
               </div>
 
