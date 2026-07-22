@@ -23,13 +23,12 @@ jobs:
       - name: Install dependencies
         run: npm ci || npm install
 
-      - name: Resolve KV namespace (SUBLINK_KV)
+      - name: Resolve KV namespace and patch wrangler.toml
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID || secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
-          # Prefer existing titles used by this project
           LIST_JSON=$(npx wrangler kv namespace list)
           echo "$LIST_JSON" | jq empty
 
@@ -50,9 +49,9 @@ jobs:
           fi
 
           echo "Using SUBLINK_KV id=$KV_ID"
+          export KV_ID
           echo "KV_ID=$KV_ID" >> "$GITHUB_ENV"
 
-          # Keep wrangler.toml binding id in sync for this deploy
           python3 - <<'PY'
           import os, re
           from pathlib import Path
@@ -61,12 +60,20 @@ jobs:
           text = p.read_text()
           text2, n = re.subn(
               r'(binding\s*=\s*"SUBLINK_KV"[^\n]*\n[^\n]*id\s*=\s*")[^"]*(")',
-              r'\g<1>' + kv + r'\g<2>',
+              r"\g<1>" + kv + r"\g<2>",
               text,
               count=1,
           )
           if n == 0:
               text2, n = re.subn(r'id\s*=\s*"[0-9a-f]{32}"', f'id = "{kv}"', text, count=1)
+          if n == 0:
+              # array form: { binding = "SUBLINK_KV", id = "..." }
+              text2, n = re.subn(
+                  r'(binding\s*=\s*"SUBLINK_KV"\s*,\s*id\s*=\s*")[^"]*(")',
+                  r"\g<1>" + kv + r"\g<2>",
+                  text,
+                  count=1,
+              )
           if n == 0:
               raise SystemExit("could not patch wrangler.toml KV id")
           p.write_text(text2)
