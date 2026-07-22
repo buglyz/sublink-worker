@@ -126,9 +126,11 @@ export class ExportTokenService {
 function normalizePrefs(prefs) {
     const p = prefs && typeof prefs === 'object' ? prefs : {};
     const out = {};
-    if (p.template) out.template = String(p.template).slice(0, 120);
+    // Explicit empty template clears previous template when mode is custom
+    if (Object.prototype.hasOwnProperty.call(p, 'template')) {
+        out.template = p.template ? String(p.template).slice(0, 120) : '';
+    }
     if (p.selectedRules != null) {
-        // string preset name or JSON array string / array
         if (Array.isArray(p.selectedRules)) {
             out.selectedRules = p.selectedRules.map(String).slice(0, 100);
         } else {

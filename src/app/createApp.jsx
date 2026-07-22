@@ -302,7 +302,9 @@ export function createApp(bindings = {}) {
 
         const lang = resolveLanguage(c.get('lang') || c.req.query('lang'));
         const ua = c.req.query('ua') || prefs.ua || getRequestHeader(c.req, 'User-Agent') || DEFAULT_USER_AGENT;
-        const templateId = c.req.query('template') || c.req.query('rule_template') || prefs.template || '';
+        // Empty string must clear stored template (custom mode)
+        const templateQuery = c.req.query('template') ?? c.req.query('rule_template');
+        const templateId = (templateQuery != null ? templateQuery : (prefs.template || '')).trim();
 
         if (templateId) {
             const builder = new TemplateClashBuilder(joined, templateId, {
@@ -320,20 +322,15 @@ export function createApp(bindings = {}) {
             });
         }
 
-        const selectedRules =
-            parseSelectedRules(c.req.query('selectedRules')) ||
-            parseSelectedRules(
-                typeof prefs.selectedRules === 'string'
-                    ? prefs.selectedRules
-                    : prefs.selectedRules
-                        ? JSON.stringify(prefs.selectedRules)
-                        : null
-            ) ||
-            'balanced';
-        const customRules =
-            parseJsonArray(c.req.query('customRules')) ||
-            (Array.isArray(prefs.customRules) ? prefs.customRules : []) ||
-            [];
+        // NOTE: parseSelectedRules(undefined) returns [] which is truthy — do NOT use || chaining.
+        const selectedRules = resolveRulesPreference(
+            c.req.query('selectedRules'),
+            prefs.selectedRules
+        );
+        const customRules = resolveCustomRulesPreference(
+            c.req.query('customRules'),
+            prefs.customRules
+        );
         const groupByCountry =
             c.req.query('group_by_country') != null
                 ? parseBooleanFlag(c.req.query('group_by_country'))
@@ -358,12 +355,15 @@ export function createApp(bindings = {}) {
         );
         await builder.build();
         const yamlText = builder.formatConfig();
+        const rulesLabel = typeof prefs.selectedRules === 'string'
+            ? prefs.selectedRules
+            : (c.req.query('selectedRules') || 'custom');
         return c.text(yamlText, 200, {
             'Content-Type': 'text/yaml; charset=utf-8',
             'Profile-Update-Interval': '12',
             'Cache-Control': 'no-store',
             'Content-Disposition': 'inline; filename="sublink.yaml"',
-            'X-Sublink-Rules': typeof selectedRules === 'string' ? selectedRules : 'custom'
+            'X-Sublink-Rules': rulesLabel
         });
     }
 
@@ -820,6 +820,26 @@ export function parseSelectedRules(raw) {
         console.warn(`Failed to parse selectedRules: ${raw}, falling back to minimal`);
         return PREDEFINED_RULE_SETS.minimal;
     }
+}
+
+/** Prefer query, then saved prefs; never treat [] as "missing". */
+function resolveRulesPreference(queryVal, prefsVal) {
+    if (queryVal != null && queryVal !== '') {
+        return parseSelectedRules(queryVal);
+    }
+    if (prefsVal != null && prefsVal !== '') {
+        if (Array.isArray(prefsVal)) return prefsVal;
+        return parseSelectedRules(String(prefsVal));
+    }
+    return parseSelectedRules('balanced');
+}
+
+function resolveCustomRulesPreference(queryVal, prefsVal) {
+    if (queryVal != null && queryVal !== '') {
+        return parseJsonArray(queryVal) || [];
+    }
+    if (Array.isArray(prefsVal)) return prefsVal;
+    return [];
 }
 
 function parseJsonArray(raw) {
