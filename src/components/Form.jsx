@@ -216,7 +216,7 @@ export const Form = (props) => {
                 <template x-if="$store.auth.authenticated">
                   <div>
                     <template x-if="!enabledNodes.length">
-                      <div class="text-center py-10 text-muted text-sm">暂无可用节点，请先在节点管理中添加节点</div>
+                      <div class="text-center py-10 text-muted text-sm">暂无可用节点。请到「节点管理」粘贴节点或远程订阅 URL 导入</div>
                     </template>
                     <template x-if="enabledNodes.length">
                       <div>
@@ -457,7 +457,7 @@ export const Form = (props) => {
           <div class="pixel-card mm-card" x-show="$store.auth.exportSubUrl">
             <div class="card-header border-b border-[var(--border)] pb-4">
               <div class="card-title text-base">节点库订阅</div>
-              <div class="card-desc">使用导出 Token，客户端可长期更新启用节点</div>
+              <div class="card-desc">主订阅链接（短路径 /sub/…）· 客户端持续更新启用节点</div>
             </div>
             <div class="card-content pt-4 space-y-2">
               <input

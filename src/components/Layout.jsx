@@ -113,7 +113,7 @@ export const Layout = (props) => {
                   if (!res.ok) return;
                   const data = await res.json();
                   this.exportToken = data.token || '';
-                  this.exportSubUrl = data.subscriptionUrl || (window.location.origin + '/api/nodes/subscription?token=' + encodeURIComponent(this.exportToken));
+                  this.exportSubUrl = data.subscriptionUrl || (window.location.origin + '/sub/' + encodeURIComponent(data.shortId || this.exportToken));
                   try {
                     localStorage.setItem('sublink_export_token', this.exportToken);
                     localStorage.setItem('sublink_export_sub_url', this.exportSubUrl);

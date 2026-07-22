@@ -46,6 +46,8 @@ export const NodeLibrary = (props) => {
       return {
         nodes: [],
         pasteBox: '',
+        remoteUrl: '',
+        importing: false,
         filter: '',
         selectAll: false,
         flash: '',
@@ -246,7 +248,7 @@ export const NodeLibrary = (props) => {
               const a = Alpine.store('auth');
               if (a && a.exportToken) {
                 this.exportToken = a.exportToken;
-                this.exportSubUrl = a.exportSubUrl || (window.location.origin + '/api/nodes/subscription?token=' + encodeURIComponent(a.exportToken));
+                this.exportSubUrl = a.exportSubUrl || (window.location.origin + '/sub/' + encodeURIComponent(a.exportToken));
                 return;
               }
             } catch (e) {}
@@ -254,7 +256,7 @@ export const NodeLibrary = (props) => {
             if (!res.ok) return;
             const data = await res.json();
             this.exportToken = data.token || '';
-            this.exportSubUrl = data.subscriptionUrl || (window.location.origin + '/api/nodes/subscription?token=' + encodeURIComponent(this.exportToken));
+            this.exportSubUrl = data.subscriptionUrl || (window.location.origin + '/sub/' + encodeURIComponent(data.shortId || this.exportToken));
             try {
               if (window.Alpine && Alpine.store('auth')) {
                 Alpine.store('auth').exportToken = this.exportToken;
@@ -402,8 +404,56 @@ export const NodeLibrary = (props) => {
         },
 
         importFromPaste() {
-          this.addFromText(this.pasteBox, { select: true });
+          const text = String(this.pasteBox || '').trim();
+          if (!text) {
+            this.persistMessage('请粘贴节点或订阅 URL');
+            return;
+          }
+          // Single http(s) URL line -> remote fetch import
+          const only = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+          if (only.length === 1 && /^https?:\/\//i.test(only[0])) {
+            this.remoteUrl = only[0];
+            this.importRemoteUrl();
+            return;
+          }
+          this.addFromText(text, { select: true });
           this.pasteBox = '';
+        },
+
+        async importRemoteUrl() {
+          if (!this.authenticated) {
+            this.persistMessage('请先登录');
+            return;
+          }
+          const url = String(this.remoteUrl || this.pasteBox || '').trim();
+          if (!/^https?:\/\//i.test(url)) {
+            this.persistMessage('请填写有效的 http(s) 订阅地址');
+            return;
+          }
+          this.importing = true;
+          try {
+            const res = await fetch('/api/nodes/import-url', {
+              method: 'POST',
+              headers: this.headers(true),
+              body: JSON.stringify({ url })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || ('导入失败 ' + res.status));
+            if (Array.isArray(data.nodes)) {
+              this.suppressSync = true;
+              this.nodes = data.nodes;
+              this.lastSyncedJson = JSON.stringify(this.nodes);
+              localStorage.setItem(LOCAL_MIRROR, this.lastSyncedJson);
+              setTimeout(() => { this.suppressSync = false; }, 0);
+            }
+            this.persistMessage(data.message || ('已导入 ' + (data.added || 0) + ' 个'));
+            this.pasteBox = '';
+            this.remoteUrl = '';
+          } catch (e) {
+            this.persistMessage(e.message || '远程导入失败');
+          } finally {
+            this.importing = false;
+          }
         },
 
         importFromInput() {
@@ -458,12 +508,12 @@ export const NodeLibrary = (props) => {
             const a = Alpine.store('auth');
             if (a && a.exportSubUrl) return a.exportSubUrl;
             if (a && a.exportToken) {
-              return window.location.origin + '/api/nodes/subscription?token=' + encodeURIComponent(a.exportToken);
+              return window.location.origin + '/sub/' + encodeURIComponent(a.shortId || a.exportToken);
             }
           } catch (e) {}
           if (this.exportSubUrl) return this.exportSubUrl;
           if (this.exportToken) {
-            return window.location.origin + '/api/nodes/subscription?token=' + encodeURIComponent(this.exportToken);
+            return window.location.origin + '/sub/' + encodeURIComponent(this.exportToken);
           }
           return '';
         },
@@ -636,25 +686,38 @@ export const NodeLibrary = (props) => {
         <div class="card-content pt-4 space-y-4">
 
         <div class="grid grid-cols-1 lg:grid-cols-5 gap-3 mb-3">
-          <div class="lg:col-span-3">
-            <label class="mm-label">手动导入 · 粘贴节点 / 订阅 URL</label>
-            <textarea
-              x-model="pasteBox"
-              rows={3}
-              class="mm-textarea font-mono text-[12px] min-h-[5.5rem]"
-              placeholder="每行一条：ss / vmess / vless / trojan / hysteria2 … 或 http 订阅 URL"
-            ></textarea>
+          <div class="lg:col-span-3 space-y-3">
+            <div>
+              <label class="mm-label">粘贴节点分享链接</label>
+              <textarea
+                x-model="pasteBox"
+                rows={3}
+                class="mm-textarea font-mono text-[12px] min-h-[5.5rem]"
+                placeholder="每行一条：ss / vmess / vless / trojan / hysteria2 …&#10;也可只粘贴一条 http(s) 订阅地址，将自动远程拉取"
+              ></textarea>
+            </div>
+            <div>
+              <label class="mm-label">远程订阅 URL（可选）</label>
+              <div class="flex gap-2">
+                <input type="url" class="mm-input font-mono text-xs flex-1" x-model="remoteUrl" placeholder="https://example.com/sub" />
+                <button type="button" class="mm-btn mm-btn-secondary mm-btn-sm shrink-0" x-on:click="importRemoteUrl()" x-bind:disabled="importing">
+                  <i class="fas" x-bind:class="importing ? 'fa-spinner fa-spin' : 'fa-cloud-download-alt'"></i>
+                  <span x-text="importing ? '导入中…' : '拉取导入'"></span>
+                </button>
+              </div>
+              <p class="text-[11px] text-muted mt-1">服务端拉取订阅并解析入库；失败会显示原因</p>
+            </div>
           </div>
           <div class="lg:col-span-2 flex flex-col gap-2">
             <label class="mm-label">筛选</label>
             <input type="search" x-model="filter" class="mm-input" placeholder="名称 / 协议 / 标签" />
             <div class="flex flex-wrap gap-2 mt-auto">
-              <button type="button" class="mm-btn mm-btn-primary flex-1 text-sm" x-on:click="importFromPaste()">
+              <button type="button" class="mm-btn mm-btn-primary flex-1 text-sm" x-on:click="importFromPaste()" x-bind:disabled="importing">
                 <i class="fas fa-plus text-xs"></i>
                 保存到节点库
               </button>
               <button type="button" class="mm-btn mm-btn-ghost text-sm" x-on:click="applyToConverter({ convert: false })" x-bind:disabled="selectedCount === 0">
-                填入输入框
+                填入生成页
               </button>
               <button type="button" class="mm-btn mm-btn-ghost text-sm" x-on:click="exportSelected()" x-bind:disabled="selectedCount === 0">
                 复制选中
@@ -682,8 +745,9 @@ export const NodeLibrary = (props) => {
         <div class="rounded-[var(--radius)] border border-[var(--border)] overflow-hidden">
           <div class="max-h-[22rem] overflow-auto">
             <template x-if="filtered.length === 0">
-              <div class="px-4 py-10 text-center mm-desc">
-                暂无节点。粘贴分享链接后点「添加」，或从输入源导入。
+              <div class="px-4 py-10 text-center mm-desc space-y-2">
+                <p>暂无节点</p>
+                <p class="text-xs">粘贴分享链接点「保存到节点库」，或填写远程订阅 URL 点「拉取导入」</p>
               </div>
             </template>
             <table class="w-full text-sm" x-show="filtered.length > 0">

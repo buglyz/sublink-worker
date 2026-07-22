@@ -527,13 +527,19 @@ export const formLogicFn = (t) => {
                         surge: origin + '/surge?' + queryString
                     };
 
-                    // Scroll to results
-                    setTimeout(() => {
-                        const resultsDiv = document.querySelector('.mt-12');
-                        if (resultsDiv) {
-                            resultsDiv.scrollIntoView({ behavior: 'smooth' });
+                    // Ensure export token ready, then go to subscribe page
+                    try {
+                        if (window.Alpine && Alpine.store('auth') && typeof Alpine.store('auth').ensureExportToken === 'function') {
+                            await Alpine.store('auth').ensureExportToken();
                         }
-                    }, 100);
+                    } catch (e) {}
+                    try {
+                        if (window.__SUBLINK_UI__) window.__SUBLINK_UI__.setPage('subscribe');
+                    } catch (e) {}
+                    setTimeout(() => {
+                        const resultsDiv = document.getElementById('results') || document.querySelector('[data-sub-results]');
+                        if (resultsDiv) resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 120);
 
                 } catch (error) {
                     console.error('Error generating links:', error);

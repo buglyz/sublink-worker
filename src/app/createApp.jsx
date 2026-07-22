@@ -19,7 +19,8 @@ import { ConfigStorageService } from '../services/configStorageService.js';
 import { AuthService } from '../services/authService.js';
 import { NodeStorageService } from '../services/nodeStorageService.js';
 import { ExportTokenService } from '../services/exportTokenService.js';
-import { ServiceError, MissingDependencyError, UnauthorizedError } from '../services/errors.js';
+import { NodeImportService } from '../services/nodeImportService.js';
+import { ServiceError, MissingDependencyError, UnauthorizedError, InvalidPayloadError } from '../services/errors.js';
 import { normalizeRuntime } from '../runtime/runtimeConfig.js';
 import { PREDEFINED_RULE_SETS, SING_BOX_CONFIG, SING_BOX_CONFIG_V1_11, generateSubconverterConfig } from '../config/index.js';
 
@@ -34,7 +35,8 @@ export function createApp(bindings = {}) {
         configStorage: runtime.kv ? new ConfigStorageService(runtime.kv, { configTtlSeconds: runtime.config.configTtlSeconds }) : null,
         auth: new AuthService(runtime.kv, { password: authPassword }),
         nodes: runtime.kv ? new NodeStorageService(runtime.kv) : null,
-        exportToken: runtime.kv ? new ExportTokenService(runtime.kv) : null
+        exportToken: runtime.kv ? new ExportTokenService(runtime.kv) : null,
+        nodeImport: runtime.kv ? new NodeImportService(new NodeStorageService(runtime.kv)) : null
     };
 
     const app = new Hono();
@@ -129,18 +131,22 @@ export function createApp(bindings = {}) {
         }
     });
 
-    // Long-lived export token (independent of login session). Used by Clash/clients.
+    // Subscription export token (used by clients). Prefer short URL /sub/<id>
     app.get('/api/export-token', requireAuth, async (c) => {
         try {
             if (!services.exportToken) {
                 throw new MissingDependencyError('Export token requires KV');
             }
             const record = await services.exportToken.getOrCreate();
+            const origin = new URL(c.req.url).origin;
+            const path = services.exportToken.subscriptionPath(record);
             return c.json({
                 token: record.token,
+                shortId: record.shortId,
                 createdAt: record.createdAt,
                 rotatedAt: record.rotatedAt,
-                subscriptionUrl: `${new URL(c.req.url).origin}/api/nodes/subscription?token=${encodeURIComponent(record.token)}`
+                subscriptionUrl: `${origin}${path}`,
+                legacyUrl: `${origin}/api/nodes/subscription?token=${encodeURIComponent(record.shortId || record.token)}`
             });
         } catch (error) {
             return handleError(c, error, runtime.logger);
@@ -153,49 +159,82 @@ export function createApp(bindings = {}) {
                 throw new MissingDependencyError('Export token requires KV');
             }
             const record = await services.exportToken.rotate();
+            const origin = new URL(c.req.url).origin;
+            const path = services.exportToken.subscriptionPath(record);
             return c.json({
                 token: record.token,
+                shortId: record.shortId,
                 createdAt: record.createdAt,
                 rotatedAt: record.rotatedAt,
-                subscriptionUrl: `${new URL(c.req.url).origin}/api/nodes/subscription?token=${encodeURIComponent(record.token)}`
+                subscriptionUrl: `${origin}${path}`,
+                legacyUrl: `${origin}/api/nodes/subscription?token=${encodeURIComponent(record.shortId || record.token)}`
             });
         } catch (error) {
             return handleError(c, error, runtime.logger);
         }
     });
 
-    // Miaomiaowu-style: export saved enabled nodes as a plain subscription (one URI per line).
-    // Auth: prefer long-lived export token, then login session (Bearer / ?token=).
-    app.get('/api/nodes/subscription', async (c) => {
+    // Import remote subscription URL into node library
+    app.post('/api/nodes/import-url', requireAuth, async (c) => {
         try {
-            if (services.auth.isEnabled()) {
-                const token = extractBearerToken(c) || c.req.query('token') || '';
-                let ok = false;
-                if (token) {
-                    if (services.exportToken) {
-                        ok = await services.exportToken.validate(token);
-                    }
-                    if (!ok) {
-                        ok = await services.auth.validateToken(token);
-                    }
-                }
-                if (!ok) throw new UnauthorizedError();
+            if (!services.nodeImport) {
+                throw new MissingDependencyError('Node import requires KV');
             }
-            const nodes = await requireNodeStorage(services.nodes).list();
-            const lines = nodes
-                .filter((n) => n && n.enabled !== false && n.raw)
-                .map((n) => String(n.raw).trim())
-                .filter(Boolean);
-            const body = lines.join('\n');
-            return c.text(body, 200, {
-                'Content-Type': 'text/plain; charset=utf-8',
-                'Profile-Update-Interval': '12',
-                'Cache-Control': 'no-store'
+            const body = await c.req.json().catch(() => ({}));
+            const result = await services.nodeImport.importFromUrl(body.url || body.subscription || '', {
+                tag: body.tag,
+                name: body.name,
+                userAgent: body.ua || getRequestHeader(c.req, 'User-Agent') || DEFAULT_USER_AGENT
             });
+            return c.json(result);
         } catch (error) {
             return handleError(c, error, runtime.logger);
         }
     });
+
+    // Short subscription path for clients (default)
+    app.get('/sub/:id', async (c) => {
+        try {
+            return await exportNodesSubscription(c.req.param('id') || '', c);
+        } catch (error) {
+            return handleError(c, error, runtime.logger);
+        }
+    });
+
+    // Legacy query-token path (still supported)
+    app.get('/api/nodes/subscription', async (c) => {
+        try {
+            return await exportNodesSubscription(extractBearerToken(c) || c.req.query('token') || '', c);
+        } catch (error) {
+            return handleError(c, error, runtime.logger);
+        }
+    });
+
+    async function exportNodesSubscription(tokenOrShortId, c) {
+        if (services.auth.isEnabled()) {
+            let ok = false;
+            if (tokenOrShortId) {
+                if (services.exportToken) {
+                    ok = await services.exportToken.validate(tokenOrShortId);
+                }
+                if (!ok) {
+                    ok = await services.auth.validateToken(tokenOrShortId);
+                }
+            }
+            if (!ok) throw new UnauthorizedError();
+        }
+        const nodes = await requireNodeStorage(services.nodes).list();
+        const lines = nodes
+            .filter((n) => n && n.enabled !== false && n.raw)
+            .map((n) => String(n.raw).trim())
+            .filter(Boolean);
+        const body = lines.join('\n');
+        return c.text(body, 200, {
+            'Content-Type': 'text/plain; charset=utf-8',
+            'Profile-Update-Interval': '12',
+            'Cache-Control': 'no-store'
+        });
+    }
 
     app.get('/api/nodes/summary', requireAuth, async (c) => {
         try {
