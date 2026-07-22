@@ -55,6 +55,8 @@ export const NodeLibrary = (props) => {
         authenticated: false,
         kvReady: false,
         token: localStorage.getItem(TOKEN_KEY) || '',
+        exportToken: '',
+        exportSubUrl: '',
         password: '',
         loading: false,
         saving: false,
@@ -217,10 +219,36 @@ export const NodeLibrary = (props) => {
             const data = await res.json();
             this.nodes = Array.isArray(data.nodes) ? data.nodes : [];
             localStorage.setItem(LOCAL_MIRROR, JSON.stringify(this.nodes));
+            await this.loadExportToken();
           } catch (e) {
             this.flash = '加载节点失败: ' + (e.message || '');
           } finally {
             this.loading = false;
+          }
+        },
+
+        async loadExportToken() {
+          if (!this.authenticated) return;
+          try {
+            const res = await fetch('/api/export-token', { headers: this.headers() });
+            if (!res.ok) return;
+            const data = await res.json();
+            this.exportToken = data.token || '';
+            this.exportSubUrl = data.subscriptionUrl || (window.location.origin + '/api/nodes/subscription?token=' + encodeURIComponent(this.exportToken));
+          } catch (e) {}
+        },
+
+        async rotateExportToken() {
+          if (!confirm('轮换导出 Token 后，旧订阅链接将立即失效，确定？')) return;
+          try {
+            const res = await fetch('/api/export-token/rotate', { method: 'POST', headers: this.headers() });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || '轮换失败');
+            this.exportToken = data.token || '';
+            this.exportSubUrl = data.subscriptionUrl || '';
+            this.persistMessage('已生成新的长期导出 Token');
+          } catch (e) {
+            this.persistMessage(e.message || '轮换失败');
           }
         },
 
@@ -384,15 +412,20 @@ export const NodeLibrary = (props) => {
         },
 
         subUrl() {
-          const t = this.token || (localStorage.getItem(TOKEN_KEY) || '');
+          if (this.exportSubUrl) return this.exportSubUrl;
+          if (this.exportToken) {
+            return window.location.origin + '/api/nodes/subscription?token=' + encodeURIComponent(this.exportToken);
+          }
+          // fallback (session — not long-lived)
+          const sess = this.token || (localStorage.getItem(TOKEN_KEY) || '');
           const origin = window.location.origin;
-          if (!t) return origin + '/api/nodes/subscription';
-          return origin + '/api/nodes/subscription?token=' + encodeURIComponent(t);
+          if (!sess) return origin + '/api/nodes/subscription';
+          return origin + '/api/nodes/subscription?token=' + encodeURIComponent(sess);
         },
 
         copySubUrl() {
           const url = this.subUrl();
-          navigator.clipboard.writeText(url).then(() => this.persistMessage('已复制节点库订阅链接')).catch(() => {
+          navigator.clipboard.writeText(url).then(() => this.persistMessage('已复制长期订阅链接（导出 Token）')).catch(() => {
             this.persistMessage(url);
           });
         },
@@ -539,8 +572,11 @@ export const NodeLibrary = (props) => {
               </p>
             </div>
             <div class="flex flex-wrap gap-1.5">
-              <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-on:click="copySubUrl()" x-show="authenticated">
-                <i class="fas fa-link text-[10px]"></i>复制节点库订阅
+              <button type="button" class="mm-btn mm-btn-primary mm-btn-sm" x-on:click="copySubUrl()" x-show="authenticated">
+                <i class="fas fa-link text-[10px]"></i>复制长期订阅
+              </button>
+              <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-on:click="rotateExportToken()" x-show="authenticated">
+                <i class="fas fa-key text-[10px]"></i>轮换导出Token
               </button>
               <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-on:click="loadFromServer()">
                 <i class="fas fa-rotate text-[10px]"></i>刷新
@@ -556,6 +592,17 @@ export const NodeLibrary = (props) => {
           </div>
         </div>
         <div class="card-content pt-4 space-y-4">
+
+        <div class="border-2 border-[var(--border)] p-3 space-y-2" x-show="authenticated && exportSubUrl">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <div class="mm-label mb-0">长期订阅链接（导出 Token）</div>
+              <p class="text-xs text-muted">与登录会话无关，退出登录后客户端仍可更新；泄露可点「轮换导出Token」作废</p>
+            </div>
+            <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-on:click="copySubUrl()">复制链接</button>
+          </div>
+          <input type="text" class="mm-input font-mono text-xs" readOnly x-bind:value="exportSubUrl" x-on:click="$el.select()" />
+        </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-5 gap-3 mb-3">
           <div class="lg:col-span-3">

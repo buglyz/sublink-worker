@@ -18,6 +18,7 @@ import { ShortLinkService } from '../services/shortLinkService.js';
 import { ConfigStorageService } from '../services/configStorageService.js';
 import { AuthService } from '../services/authService.js';
 import { NodeStorageService } from '../services/nodeStorageService.js';
+import { ExportTokenService } from '../services/exportTokenService.js';
 import { ServiceError, MissingDependencyError, UnauthorizedError } from '../services/errors.js';
 import { normalizeRuntime } from '../runtime/runtimeConfig.js';
 import { PREDEFINED_RULE_SETS, SING_BOX_CONFIG, SING_BOX_CONFIG_V1_11, generateSubconverterConfig } from '../config/index.js';
@@ -32,7 +33,8 @@ export function createApp(bindings = {}) {
         shortLinks: runtime.kv ? new ShortLinkService(runtime.kv, { shortLinkTtlSeconds: runtime.config.shortLinkTtlSeconds }) : null,
         configStorage: runtime.kv ? new ConfigStorageService(runtime.kv, { configTtlSeconds: runtime.config.configTtlSeconds }) : null,
         auth: new AuthService(runtime.kv, { password: authPassword }),
-        nodes: runtime.kv ? new NodeStorageService(runtime.kv) : null
+        nodes: runtime.kv ? new NodeStorageService(runtime.kv) : null,
+        exportToken: runtime.kv ? new ExportTokenService(runtime.kv) : null
     };
 
     const app = new Hono();
@@ -127,13 +129,54 @@ export function createApp(bindings = {}) {
         }
     });
 
+    // Long-lived export token (independent of login session). Used by Clash/clients.
+    app.get('/api/export-token', requireAuth, async (c) => {
+        try {
+            if (!services.exportToken) {
+                throw new MissingDependencyError('Export token requires KV');
+            }
+            const record = await services.exportToken.getOrCreate();
+            return c.json({
+                token: record.token,
+                createdAt: record.createdAt,
+                rotatedAt: record.rotatedAt,
+                subscriptionUrl: `${new URL(c.req.url).origin}/api/nodes/subscription?token=${encodeURIComponent(record.token)}`
+            });
+        } catch (error) {
+            return handleError(c, error, runtime.logger);
+        }
+    });
+
+    app.post('/api/export-token/rotate', requireAuth, async (c) => {
+        try {
+            if (!services.exportToken) {
+                throw new MissingDependencyError('Export token requires KV');
+            }
+            const record = await services.exportToken.rotate();
+            return c.json({
+                token: record.token,
+                createdAt: record.createdAt,
+                rotatedAt: record.rotatedAt,
+                subscriptionUrl: `${new URL(c.req.url).origin}/api/nodes/subscription?token=${encodeURIComponent(record.token)}`
+            });
+        } catch (error) {
+            return handleError(c, error, runtime.logger);
+        }
+    });
+
     // Miaomiaowu-style: export saved enabled nodes as a plain subscription (one URI per line).
-    // Auth: Bearer session token OR ?token= (same session token). Suitable as client sub URL.
+    // Auth: login session (Bearer / ?token=session) OR long-lived export token (?token=export).
     app.get('/api/nodes/subscription', async (c) => {
         try {
             if (services.auth.isEnabled()) {
                 const token = extractBearerToken(c) || c.req.query('token') || '';
-                const ok = await services.auth.validateToken(token);
+                let ok = false;
+                if (token) {
+                    ok = await services.auth.validateToken(token);
+                    if (!ok && services.exportToken) {
+                        ok = await services.exportToken.validate(token);
+                    }
+                }
                 if (!ok) throw new UnauthorizedError();
             }
             const nodes = await requireNodeStorage(services.nodes).list();
