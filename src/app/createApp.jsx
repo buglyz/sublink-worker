@@ -15,7 +15,9 @@ import { encodeBase64, tryDecodeSubscriptionLines } from '../utils.js';
 import { APP_NAME, APP_SUBTITLE } from '../constants.js';
 import { ShortLinkService } from '../services/shortLinkService.js';
 import { ConfigStorageService } from '../services/configStorageService.js';
-import { ServiceError, MissingDependencyError } from '../services/errors.js';
+import { AuthService } from '../services/authService.js';
+import { NodeStorageService } from '../services/nodeStorageService.js';
+import { ServiceError, MissingDependencyError, UnauthorizedError } from '../services/errors.js';
 import { normalizeRuntime } from '../runtime/runtimeConfig.js';
 import { PREDEFINED_RULE_SETS, SING_BOX_CONFIG, SING_BOX_CONFIG_V1_11, generateSubconverterConfig } from '../config/index.js';
 
@@ -23,9 +25,13 @@ const DEFAULT_USER_AGENT = 'curl/7.74.0';
 
 export function createApp(bindings = {}) {
     const runtime = normalizeRuntime(bindings);
+    const env = bindings.env || bindings.processEnv || {};
+    const authPassword = bindings.authPassword || env.AUTH_PASSWORD || env.SUBLINK_PASSWORD || '';
     const services = {
         shortLinks: runtime.kv ? new ShortLinkService(runtime.kv, { shortLinkTtlSeconds: runtime.config.shortLinkTtlSeconds }) : null,
-        configStorage: runtime.kv ? new ConfigStorageService(runtime.kv, { configTtlSeconds: runtime.config.configTtlSeconds }) : null
+        configStorage: runtime.kv ? new ConfigStorageService(runtime.kv, { configTtlSeconds: runtime.config.configTtlSeconds }) : null,
+        auth: new AuthService(runtime.kv, { password: authPassword }),
+        nodes: runtime.kv ? new NodeStorageService(runtime.kv) : null
     };
 
     const app = new Hono();
@@ -36,6 +42,88 @@ export function createApp(bindings = {}) {
         c.set('lang', lang);
         c.set('t', createTranslator(lang));
         await next();
+    });
+
+    app.get('/api/auth/status', (c) => {
+        return c.json({
+            authRequired: services.auth.isEnabled(),
+            kvReady: Boolean(runtime.kv)
+        });
+    });
+
+    app.post('/api/auth/login', async (c) => {
+        try {
+            const body = await c.req.json().catch(() => ({}));
+            const result = await services.auth.login(body.password || '');
+            return c.json(result);
+        } catch (error) {
+            return handleError(c, error, runtime.logger);
+        }
+    });
+
+    app.post('/api/auth/logout', async (c) => {
+        try {
+            const token = extractBearerToken(c);
+            await services.auth.logout(token);
+            return c.json({ ok: true });
+        } catch (error) {
+            return handleError(c, error, runtime.logger);
+        }
+    });
+
+    app.get('/api/auth/me', async (c) => {
+        try {
+            if (!services.auth.isEnabled()) {
+                return c.json({ authenticated: true, authRequired: false });
+            }
+            const token = extractBearerToken(c);
+            const ok = await services.auth.validateToken(token);
+            if (!ok) throw new UnauthorizedError();
+            return c.json({ authenticated: true, authRequired: true });
+        } catch (error) {
+            return handleError(c, error, runtime.logger);
+        }
+    });
+
+    const requireAuth = async (c, next) => {
+        if (!services.auth.isEnabled()) {
+            await next();
+            return;
+        }
+        const token = extractBearerToken(c);
+        const ok = await services.auth.validateToken(token);
+        if (!ok) {
+            return c.json({ error: 'Unauthorized' }, 401);
+        }
+        await next();
+    };
+
+    app.get('/api/nodes', requireAuth, async (c) => {
+        try {
+            const nodes = await requireNodeStorage(services.nodes).list();
+            return c.json({ nodes });
+        } catch (error) {
+            return handleError(c, error, runtime.logger);
+        }
+    });
+
+    app.put('/api/nodes', requireAuth, async (c) => {
+        try {
+            const body = await c.req.json().catch(() => ({}));
+            const nodes = await requireNodeStorage(services.nodes).save(body.nodes || []);
+            return c.json({ nodes });
+        } catch (error) {
+            return handleError(c, error, runtime.logger);
+        }
+    });
+
+    app.delete('/api/nodes', requireAuth, async (c) => {
+        try {
+            const nodes = await requireNodeStorage(services.nodes).clear();
+            return c.json({ nodes });
+        } catch (error) {
+            return handleError(c, error, runtime.logger);
+        }
     });
 
     app.get('/', (c) => {
@@ -566,6 +654,13 @@ function getRequestHeader(request, name) {
     return undefined;
 }
 
+function requireNodeStorage(service) {
+    if (!service) {
+        throw new MissingDependencyError('Node storage functionality is unavailable');
+    }
+    return service;
+}
+
 function requireShortLinkService(service) {
     if (!service) {
         throw new MissingDependencyError('Short link functionality is unavailable');
@@ -580,10 +675,27 @@ function requireConfigStorage(service) {
     return service;
 }
 
+function extractBearerToken(c) {
+    const header = getRequestHeader(c.req, 'Authorization') || '';
+    const m = String(header).match(/^Bearer\s+(.+)$/i);
+    if (m) return m[1].trim();
+    const q = c.req.query('token');
+    if (q) return q;
+    return '';
+}
+
 function handleError(c, error, logger) {
     if (error instanceof ServiceError) {
+        const path = c.req.path || '';
+        if (path.startsWith('/api/')) {
+            return c.json({ error: error.message }, error.status);
+        }
         return c.text(error.message, error.status);
     }
     logger.error?.('Unhandled error', error);
+    const path = c.req.path || '';
+    if (path.startsWith('/api/')) {
+        return c.json({ error: error.message || 'Internal error' }, 500);
+    }
     return c.text(`Error: ${error.message}`, 500);
 }

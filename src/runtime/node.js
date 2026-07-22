@@ -12,7 +12,9 @@ export function createNodeRuntime(env = process.env) {
         config: {
             configTtlSeconds: parseNumber(env.CONFIG_TTL_SECONDS) || undefined,
             shortLinkTtlSeconds: parseNumber(env.SHORT_LINK_TTL_SECONDS) || null
-        }
+        },
+        env,
+        authPassword: env.AUTH_PASSWORD || env.SUBLINK_PASSWORD || ''
     };
 }
 

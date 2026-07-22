@@ -12,7 +12,9 @@ export function createVercelRuntime(env = process.env) {
         config: {
             configTtlSeconds: undefined,
             shortLinkTtlSeconds: null
-        }
+        },
+        env,
+        authPassword: env.AUTH_PASSWORD || env.SUBLINK_PASSWORD || ''
     };
 }
 
