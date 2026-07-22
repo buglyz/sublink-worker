@@ -352,7 +352,8 @@ export const NodeLibrary = (props) => {
 
         parseLines(text) {
           const lines = String(text || '')
-            .split(/\r?\n/)
+            .replace(new RegExp(String.fromCharCode(13), 'g'), String.fromCharCode(10))
+            .split(String.fromCharCode(10))
             .map((l) => l.trim())
             .filter(Boolean)
             .filter((l) => !l.startsWith('#') && !l.startsWith('//'));
@@ -410,7 +411,7 @@ export const NodeLibrary = (props) => {
             return;
           }
           // Single http(s) URL line -> remote fetch import
-          const only = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+          const only = text.replace(new RegExp(String.fromCharCode(13), 'g'), String.fromCharCode(10)).split(String.fromCharCode(10)).map((l) => l.trim()).filter(Boolean);
           if (only.length === 1 && new RegExp('^https?://', 'i').test(only[0])) {
             this.remoteUrl = only[0];
             this.importRemoteUrl();
