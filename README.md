@@ -40,33 +40,34 @@
 - Choose a "deploy" button above to click
 - That's it! See the [Document](https://sublink.works/guide/quick-start/) for more information.
 
-### Alternative Runtimes
-- **Node.js**: `npm run build:node && node dist/node-server.cjs`
-- **Vercel**: `vercel deploy` (configure KV in project settings)
-- **Docker**: `docker pull ghcr.io/7sageer/sublink-worker:latest`
-- **Docker Compose**: `docker compose up -d` (includes Redis)
-
-## ✨ Features
-
-### Supported Protocols
-ShadowSocks • VMess • VLESS • Hysteria2 • Trojan • TUIC
-
-### Client Support
-Sing-Box • Clash • Xray/V2Ray • Surge
-
-### Input Support
-- Base64 subscriptions
-- HTTP/HTTPS subscriptions
-- Full configs (Sing-Box JSON, Clash YAML, Surge INI)
-
 ### Core Capabilities
 - Import subscriptions from multiple sources
 - Generate fixed/random short links (KV-based)
+- **Node library with password login + KV sync** (cross-device; requires `AUTH_PASSWORD` + `SUBLINK_KV` on Cloudflare)
 - Light/Dark theme toggle
 - Flexible API for script automation
 - Multi-language support (Chinese, English, Persian, Russian)
 - Web interface with predefined rule sets and customizable policy groups
 
+### Cloudflare Workers (recommended)
+1. Deploy with the button above, or `npm run deploy` / GitHub Actions `Deploy Worker`
+2. Bind KV namespace **`SUBLINK_KV`** (workflow creates `sublink-worker-SUBLINK_KV` if missing)
+3. Set Worker secret (required for 节点管理):
+   ```bash
+   npx wrangler secret put AUTH_PASSWORD
+   ```
+   Or add GitHub Actions secret `AUTH_PASSWORD` (deploy workflow injects it)
+4. Open the Worker URL → topbar **节点管理** → login with that password
+
+Without `AUTH_PASSWORD`, conversion still works; the node library stays open (no login) only if you intentionally leave auth disabled—set the secret in production.
+
+Local Worker: put `AUTH_PASSWORD=...` in `.dev.vars`, then `npm run dev`.
+
+### Alternative Runtimes
+- **Node.js**: set `AUTH_PASSWORD` + Redis/`KV_REST_*` in env, then `npm run build:node && node dist/node-server.cjs`
+- **Vercel**: `vercel deploy` (configure KV + `AUTH_PASSWORD`)
+- **Docker**: `docker pull ghcr.io/7sageer/sublink-worker:latest` (compose includes Redis; pass `AUTH_PASSWORD`)
+- **Docker Compose**: `docker compose up -d`
 ## 🤝 Contributing
 
 Issues and Pull Requests are welcome to improve this project.

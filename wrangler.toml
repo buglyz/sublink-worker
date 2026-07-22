@@ -4,9 +4,19 @@ main = "src/worker.jsx"
 compatibility_date = "2024-07-24"
 compatibility_flags = ["nodejs_compat"]
 
+# Node library + auth sessions + short links + base configs
 kv_namespaces = [
   { binding = "SUBLINK_KV", id = "e6293e2c43894b59ba1a7aa7a78e7eca" }
 ]
 
 [assets]
 directory = "./public"
+
+# Required for cross-device node library (set as secret, not plaintext):
+#   wrangler secret put AUTH_PASSWORD
+# Optional alias: SUBLINK_PASSWORD
+# After deploy, UI "节点管理" requires login; sessions live in SUBLINK_KV.
+#
+# Local Worker dev:
+#   echo 'AUTH_PASSWORD=your-pass' >> .dev.vars
+#   npm run dev
