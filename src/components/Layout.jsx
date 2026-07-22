@@ -326,9 +326,38 @@ export const Layout = (props) => {
           }
         </style>
         <script>
+          document.addEventListener('alpine:init', () => {
+            const saved = localStorage.getItem('sublink_page') || 'generate';
+            Alpine.store('ui', {
+              page: ['generate', 'nodes', 'subscribe'].includes(saved) ? saved : 'generate',
+              setPage(p) {
+                if (!['generate', 'nodes', 'subscribe'].includes(p)) return;
+                this.page = p;
+                localStorage.setItem('sublink_page', p);
+                if (p === 'subscribe') {
+                  setTimeout(() => {
+                    const el = document.getElementById('results');
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }, 40);
+                } else {
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+                try {
+                  history.replaceState(null, '', '#' + p);
+                } catch {}
+              }
+            });
+          });
+
           function appData() {
             return {
               darkMode: localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches),
+              get page() {
+                return Alpine.store('ui')?.page || 'generate';
+              },
+              setPage(p) {
+                Alpine.store('ui')?.setPage(p);
+              },
               toggleDarkMode() {
                 this.darkMode = !this.darkMode;
                 localStorage.setItem('theme', this.darkMode ? 'dark' : 'light');
@@ -340,6 +369,16 @@ export const Layout = (props) => {
                 document.documentElement.classList.toggle('dark', this.darkMode);
                 const meta = document.querySelector('meta[name="theme-color"]');
                 if (meta) meta.setAttribute('content', this.darkMode ? '#10131c' : '#fffaf7');
+                const hash = (location.hash || '').replace('#', '');
+                const map = { workspace: 'generate', results: 'subscribe' };
+                const page = map[hash] || hash;
+                if (['generate', 'nodes', 'subscribe'].includes(page)) {
+                  Alpine.store('ui')?.setPage(page);
+                }
+                window.addEventListener('hashchange', () => {
+                  const h = (location.hash || '').replace('#', '');
+                  if (['generate', 'nodes', 'subscribe'].includes(h)) Alpine.store('ui')?.setPage(h);
+                });
               }
             }
           }

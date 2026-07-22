@@ -232,6 +232,7 @@ export const NodeLibrary = (props) => {
               data.input = text;
               if (convert && typeof data.submitForm === 'function') {
                 data.submitForm();
+                try { Alpine.store('ui')?.setPage('subscribe'); } catch {}
               }
               this.persistMessage(convert ? '已用选中节点生成订阅' : '已填入转换输入框');
               if (convert) {

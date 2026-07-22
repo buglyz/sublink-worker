@@ -45,29 +45,10 @@ export function createApp(bindings = {}) {
 
         return c.html(
             <Layout title={t('pageTitle')} description={t('pageDescription')} keywords={t('pageKeywords')}>
-                <div class="flex min-h-svh flex-col">
+                <div class="flex min-h-svh flex-col bg-background">
                     <Navbar />
-                    <main class="flex-1">
-                        <div class="mx-auto w-full max-w-6xl px-4 sm:px-6 pt-20 pb-10">
-                            <header class="mb-6 sm:mb-8">
-                                <div class="flex flex-wrap items-end justify-between gap-3">
-                                    <div>
-                                        <div class="mb-2 flex flex-wrap gap-2">
-                                            <span class="mm-chip"><i class="fas fa-layer-group text-[10px] text-[var(--primary)]"></i>Clash Meta 模板</span>
-                                            <span class="mm-chip">Sing-Box · Surge · Xray</span>
-                                            <span class="mm-chip">Worker / Node / Docker</span>
-                                        </div>
-                                        <h1 class="text-2xl sm:text-3xl font-semibold tracking-tight text-[var(--foreground)]">
-                                            {APP_NAME}
-                                        </h1>
-                                        <p class="mt-1.5 max-w-2xl text-sm sm:text-[15px] text-[var(--muted-foreground)]">
-                                            {subtitle}
-                                        </p>
-                                    </div>
-                                </div>
-                            </header>
-                            <Form t={t} lang={lang} />
-                        </div>
+                    <main class="flex-1 mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 pt-24">
+                        <Form t={t} lang={lang} subtitle={subtitle} />
                     </main>
                     <Footer />
                     <UpdateChecker />
