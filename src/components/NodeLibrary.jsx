@@ -63,11 +63,44 @@ export const NodeLibrary = (props) => {
         syncTimer: null,
 
         async init() {
+          const self = this;
+          // Prefer global auth store (site-wide login gate)
+          try {
+            if (window.Alpine && Alpine.store('auth')) {
+              const a = Alpine.store('auth');
+              if (a.token) this.token = a.token;
+              if (a.authenticated) this.authenticated = true;
+              this.authRequired = !!a.authRequired;
+            }
+          } catch (e) {}
+          window.addEventListener('sublink-auth', async (e) => {
+            try {
+              const a = Alpine.store('auth');
+              this.token = a.token || localStorage.getItem(TOKEN_KEY) || '';
+              this.authenticated = !!a.authenticated;
+              this.authRequired = !!a.authRequired;
+            } catch (err) {
+              this.token = localStorage.getItem(TOKEN_KEY) || '';
+              this.authenticated = !!(e.detail && e.detail.authenticated);
+            }
+            if (this.authenticated) await this.loadFromServer();
+            else this.nodes = [];
+            this.bootstrapped = true;
+          });
+          window.addEventListener('nodes-import-from-input', () => {
+            self.importFromInput();
+          });
           await this.refreshStatus();
+          // Re-sync token after status check
+          try {
+            if (window.Alpine && Alpine.store('auth') && Alpine.store('auth').token) {
+              this.token = Alpine.store('auth').token;
+              this.authenticated = !!Alpine.store('auth').authenticated;
+            }
+          } catch (e) {}
           if (this.authenticated) {
             await this.loadFromServer();
           } else {
-            // show empty until login
             this.nodes = [];
           }
           this.bootstrapped = true;
@@ -488,7 +521,7 @@ export const NodeLibrary = (props) => {
           <p class="text-sm text-red-500" x-show="loginError" x-text="loginError"></p>
           <p class="mm-desc" x-show="!kvReady">警告：当前未检测到 KV，登录后可能无法持久化。</p>
           <button type="button" class="mm-btn mm-btn-primary w-full" x-on:click="login()" x-bind:disabled="loading">
-            <i class="fas" x-bind:class="loading ? 'fa-spinner fa-spin' : 'fa-right-to-bracket'"></i>
+            <i class="fas" x-bind:class={'loading ? "fa-spinner fa-spin" : "fa-right-to-bracket"'}></i>
             登录
           </button>
         </div>
@@ -587,7 +620,7 @@ export const NodeLibrary = (props) => {
               </thead>
               <tbody>
                 <template x-for="node in filtered" x-bind:key="node.id">
-                  <tr class="border-b border-[var(--border)] last:border-0 hover:bg-[color-mix(in_srgb,var(--muted)_35%,transparent)]" x-bind:class="node.enabled === false ? 'opacity-50' : ''">
+                  <tr class="border-b border-[var(--border)] last:border-0 hover:bg-[color-mix(in_srgb,var(--muted)_35%,transparent)]" x-bind:class={'node.enabled === false ? "opacity-50" : ""'}>
                     <td class="px-3 py-2">
                       <input type="checkbox" class="mm-check" x-model="node.selected" />
                     </td>

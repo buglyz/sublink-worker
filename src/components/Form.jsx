@@ -255,8 +255,8 @@ export const Form = (props) => {
               <div class="space-y-3 pt-2 border-t-2 border-[var(--border)]">
                 <label class="mm-label">规则模式</label>
                 <div class="flex gap-2">
-                  <button type="button" class="mm-btn flex-1" x-on:click="setRuleMode('custom')" x-bind:class={'ruleMode === "custom" ? "mm-btn-primary" : "mm-btn-outline"'}>自定义规则</button>
-                  <button type="button" class="mm-btn flex-1" x-on:click="setRuleMode('template')" x-bind:class={'ruleMode === "template" ? "mm-btn-primary" : "mm-btn-outline"'}>使用模板</button>
+                  <button type="button" class="mm-btn flex-1" x-on:click={'setRuleMode("custom")'} x-bind:class={'ruleMode === "custom" ? "mm-btn-primary" : "mm-btn-outline"'}>自定义规则</button>
+                  <button type="button" class="mm-btn flex-1" x-on:click={'setRuleMode("template")'} x-bind:class={'ruleMode === "template" ? "mm-btn-primary" : "mm-btn-outline"'}>使用模板</button>
                 </div>
               </div>
 
@@ -289,7 +289,7 @@ export const Form = (props) => {
                   <div class="text-xs font-semibold uppercase tracking-wide text-muted">{t('clashTemplateGroupV3')}</div>
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {templateGroups.v3.map((tpl) => (
-                      <button type="button" class="mm-btn mm-btn-outline w-full justify-start text-left h-auto py-2.5 px-3 whitespace-normal" data-tpl={tpl.id} x-on:click="selectedTemplate = $el.dataset.tpl" x-bind:class={`selectedTemplate === '${tpl.id}' ? 'mm-btn-primary' : ''`}>
+                      <button type="button" class="mm-btn mm-btn-outline w-full justify-start text-left h-auto py-2.5 px-3 whitespace-normal" data-tpl={tpl.id} x-on:click="selectedTemplate = $el.dataset.tpl" x-bind:class={`selectedTemplate === "${tpl.id}" ? "mm-btn-primary" : ""`}>
                         <span class="flex flex-col items-start gap-0.5"><span class="font-semibold text-sm">{tpl.label}</span><span class="font-mono text-[10px] opacity-70">{tpl.id}</span></span>
                       </button>
                     ))}
@@ -299,7 +299,7 @@ export const Form = (props) => {
                   <div class="text-xs font-semibold uppercase tracking-wide text-muted">{t('clashTemplateGroupAethersailor')}</div>
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {templateGroups.aethersailor.map((tpl) => (
-                      <button type="button" class="mm-btn mm-btn-outline w-full justify-start text-left h-auto py-2.5 px-3 whitespace-normal" data-tpl={tpl.id} x-on:click="selectedTemplate = $el.dataset.tpl" x-bind:class={`selectedTemplate === '${tpl.id}' ? 'mm-btn-primary' : ''`}>
+                      <button type="button" class="mm-btn mm-btn-outline w-full justify-start text-left h-auto py-2.5 px-3 whitespace-normal" data-tpl={tpl.id} x-on:click="selectedTemplate = $el.dataset.tpl" x-bind:class={`selectedTemplate === "${tpl.id}" ? "mm-btn-primary" : ""`}>
                         <span class="flex flex-col items-start gap-0.5"><span class="font-semibold text-sm">{tpl.label}</span><span class="font-mono text-[10px] opacity-70">{tpl.id}</span></span>
                       </button>
                     ))}
@@ -309,7 +309,7 @@ export const Form = (props) => {
                   <div class="text-xs font-semibold uppercase tracking-wide text-muted">{t('clashTemplateGroupAcl4ssr')}</div>
                   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[18rem] overflow-y-auto pr-1">
                     {templateGroups.acl4ssr.map((tpl) => (
-                      <button type="button" class="mm-btn mm-btn-outline w-full justify-start text-left h-auto py-2.5 px-3 whitespace-normal" data-tpl={tpl.id} x-on:click="selectedTemplate = $el.dataset.tpl" x-bind:class={`selectedTemplate === '${tpl.id}' ? 'mm-btn-primary' : ''`}>
+                      <button type="button" class="mm-btn mm-btn-outline w-full justify-start text-left h-auto py-2.5 px-3 whitespace-normal" data-tpl={tpl.id} x-on:click="selectedTemplate = $el.dataset.tpl" x-bind:class={`selectedTemplate === "${tpl.id}" ? "mm-btn-primary" : ""`}>
                         <span class="flex flex-col items-start gap-0.5"><span class="font-semibold text-sm">{tpl.label}</span><span class="font-mono text-[10px] opacity-70">{tpl.id}</span></span>
                       </button>
                     ))}
@@ -337,22 +337,11 @@ export const Form = (props) => {
                 <button
                   type="button"
                   class="mm-btn mm-btn-primary flex-1"
-                  x-on:click="
-                    (function(){
-                      const picker = document.querySelector('[x-data*=nodePickerData]');
-                      try {
-                        if (picker && picker._x_dataStack && picker._x_dataStack[0] && typeof picker._x_dataStack[0].generateFromSelection === 'function') {
-                          picker._x_dataStack[0].generateFromSelection();
-                          return;
-                        }
-                      } catch(e) {}
-                      submitForm();
-                    })()
-                  "
+                  x-on:click="generateWithPicker()"
                   x-bind:disabled="loading"
                 >
                   <i class="fas" x-bind:class={'loading ? "fa-spinner fa-spin" : "fa-file-export"'}></i>
-                  <span x-text="loading ? processingText : '生成订阅文件'"></span>
+                  <span x-text={'loading ? processingText : "生成订阅文件"'}></span>
                 </button>
                 <button type="button" class="mm-btn mm-btn-outline" x-on:click="clearAll()">清空</button>
               </div>
@@ -372,7 +361,7 @@ export const Form = (props) => {
           </div>
 
           <div class="pixel-card mm-card">
-            <button type="button" class="w-full card-header pb-4 text-left flex items-start justify-between gap-3" x-on:click="toggleAccordion('advanced')">
+            <button type="button" class="w-full card-header pb-4 text-left flex items-start justify-between gap-3" x-on:click={'toggleAccordion("advanced")'}>
               <div>
                 <div class="card-title text-base">进阶配置</div>
                 <div class="card-desc">Subconverter · Base Config · User-Agent</div>
@@ -455,7 +444,7 @@ export const Form = (props) => {
         <div class="pixel-card mm-card" x-show="!generatedLinks">
           <div class="card-content py-10 text-center">
             <p class="text-muted mb-4">还没有生成结果</p>
-            <button type="button" class="mm-btn mm-btn-primary" x-on:click="window.__SUBLINK_UI__.setPage('generate')">去生成订阅</button>
+            <button type="button" class="mm-btn mm-btn-primary" x-on:click={'window.__SUBLINK_UI__.setPage("generate")'}>去生成订阅</button>
           </div>
         </div>
         <div class="pixel-card mm-card" x-show="generatedLinks" x-cloak>

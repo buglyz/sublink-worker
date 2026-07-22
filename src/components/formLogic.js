@@ -377,6 +377,27 @@ export const formLogicFn = (t) => {
                 }
             },
 
+            generateWithPicker() {
+                try {
+                    const picker = document.querySelector('[x-data*="nodePickerData"]');
+                    const pd = picker && picker._x_dataStack && picker._x_dataStack[0];
+                    if (pd) {
+                        const count = (pd.nodes || []).filter((n) => n.picked && n.enabled !== false).length;
+                        if (count > 0) {
+                            pd.generateFromSelection();
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+                if (!String(this.input || '').trim()) {
+                    alert('请先在节点列表勾选节点，或到节点管理添加节点');
+                    return;
+                }
+                this.submitForm();
+            },
+
             clearAll() {
                 if (confirm(window.APP_TRANSLATIONS.confirmClearAll)) {
                     this.input = '';

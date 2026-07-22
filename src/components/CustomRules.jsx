@@ -12,8 +12,8 @@ export const CustomRules = (props) => {
           <button
             type="button"
             class="mm-tab"
-            x-on:click="mode = 'form'"
-            x-bind:class="mode === 'form' ? 'is-active' : ''"
+            x-on:click={'mode = "form"'}
+            x-bind:class={'mode === "form" ? "is-active" : ""'}
           >
             <i class="fas fa-list text-[10px]"></i>
             {t('customRulesForm')}
@@ -21,8 +21,8 @@ export const CustomRules = (props) => {
           <button
             type="button"
             class="mm-tab"
-            x-on:click="mode = 'json'"
-            x-bind:class="mode === 'json' ? 'is-active' : ''"
+            x-on:click={'mode = "json"'}
+            x-bind:class={'mode === "json" ? "is-active" : ""'}
           >
             <i class="fas fa-code text-[10px]"></i>
             {t('customRulesJSON')}
@@ -30,7 +30,7 @@ export const CustomRules = (props) => {
         </div>
       </div>
 
-      <div x-show="mode === 'form'">
+      <div x-show={'mode === "form"'}>
         <template x-if="rules.length === 0">
           <div class="rounded-[var(--radius)] border border-dashed border-[var(--border)] bg-[color-mix(in_srgb,var(--muted)_40%,transparent)] px-4 py-10 text-center">
             <p class="mm-desc mb-4">{t('noCustomRulesForm')}</p>
@@ -103,7 +103,7 @@ export const CustomRules = (props) => {
         </div>
       </div>
 
-      <div x-show="mode === 'json'" class="space-y-3">
+      <div x-show={'mode === "json"'} class="space-y-3">
         <div class="flex justify-end gap-1.5">
           <button
             type="button"
@@ -113,7 +113,7 @@ export const CustomRules = (props) => {
             <i class="fas fa-paste"></i>
             {t('paste')}
           </button>
-          <button type="button" class="mm-btn mm-btn-ghost text-xs" x-on:click="jsonContent = '[]'">
+          <button type="button" class="mm-btn mm-btn-ghost text-xs" x-on:click={'jsonContent = "[]"'}>
             <i class="fas fa-times"></i>
             {t('clear')}
           </button>
