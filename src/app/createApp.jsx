@@ -45,24 +45,26 @@ export function createApp(bindings = {}) {
 
         return c.html(
             <Layout title={t('pageTitle')} description={t('pageDescription')} keywords={t('pageKeywords')}>
-                <div class="flex flex-col min-h-screen">
+                <div class="flex min-h-svh flex-col">
                     <Navbar />
                     <main class="flex-1">
-                        <div class="mx-auto max-w-5xl px-4 sm:px-6 pt-20 pb-10">
-                            <header class="mb-10 pt-8 sm:pt-10">
-                                <div class="flex flex-wrap items-center gap-2 mb-4">
-                                    <span class="ui-chip">
-                                        <i class="fas fa-bolt text-brand-600 dark:text-brand-400 text-[10px]"></i>
-                                        Worker · Vercel · Docker
-                                    </span>
-                                    <span class="ui-chip">Sing-Box · Clash · Surge · Xray</span>
+                        <div class="mx-auto w-full max-w-6xl px-4 sm:px-6 pt-20 pb-10">
+                            <header class="mb-6 sm:mb-8">
+                                <div class="flex flex-wrap items-end justify-between gap-3">
+                                    <div>
+                                        <div class="mb-2 flex flex-wrap gap-2">
+                                            <span class="mm-chip"><i class="fas fa-layer-group text-[10px] text-[var(--primary)]"></i>Clash Meta 模板</span>
+                                            <span class="mm-chip">Sing-Box · Surge · Xray</span>
+                                            <span class="mm-chip">Worker / Node / Docker</span>
+                                        </div>
+                                        <h1 class="text-2xl sm:text-3xl font-semibold tracking-tight text-[var(--foreground)]">
+                                            {APP_NAME}
+                                        </h1>
+                                        <p class="mt-1.5 max-w-2xl text-sm sm:text-[15px] text-[var(--muted-foreground)]">
+                                            {subtitle}
+                                        </p>
+                                    </div>
                                 </div>
-                                <h1 class="text-3xl sm:text-4xl md:text-[2.65rem] font-bold tracking-tight text-gray-900 dark:text-white leading-[1.15]">
-                                    {APP_NAME}
-                                </h1>
-                                <p class="mt-3 max-w-2xl text-base sm:text-lg text-gray-600 dark:text-gray-400 leading-relaxed">
-                                    {subtitle}
-                                </p>
                             </header>
                             <Form t={t} lang={lang} />
                         </div>

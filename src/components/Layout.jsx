@@ -5,17 +5,18 @@ export const Layout = (props) => {
   const { title, children } = props
   return html`
     <!DOCTYPE html>
-    <html lang="en" x-data="appData()">
+    <html lang="zh-CN" x-data="appData()">
       <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="theme-color" content="#fffaf7" />
         <title>${title}</title>
         <meta name="description" content="Convert and optimize your subscription links easily" />
         <meta name="keywords" content="${APP_KEYWORDS}" />
         <link rel="icon" type="image/x-icon" href="/favicon.ico" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-        <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet" />
         <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
@@ -26,9 +27,8 @@ export const Layout = (props) => {
           document.addEventListener('alpine:init', () => { window.__alpineLoaded = true; });
           window.addEventListener('DOMContentLoaded', () => {
             if (window.__alpineFailed || !window.__alpineLoaded) {
-              console.error('Failed to initialize Alpine.js. Interactive features are disabled.');
               const warning = document.createElement('div');
-              warning.className = 'fixed bottom-4 right-4 z-[100] bg-rose-50 text-rose-700 border border-rose-200 px-4 py-2.5 rounded-xl shadow-lg text-sm';
+              warning.className = 'fixed bottom-4 right-4 z-[100] bg-red-50 text-red-700 border border-red-200 px-4 py-2.5 text-sm shadow';
               warning.textContent = '加载 Alpine.js 失败，页面交互功能不可用，请刷新或检查网络。';
               document.body.appendChild(warning);
             }
@@ -41,40 +41,36 @@ export const Layout = (props) => {
               extend: {
                 colors: {
                   brand: {
-                    50: '#f0fdfa',
-                    100: '#ccfbf1',
-                    200: '#99f6e4',
-                    300: '#5eead4',
-                    400: '#2dd4bf',
-                    500: '#14b8a6',
-                    600: '#0d9488',
-                    700: '#0f766e',
-                    800: '#115e59',
-                    900: '#134e4a',
-                    950: '#042f2e',
+                    50: '#fef5f2',
+                    100: '#fde8e2',
+                    200: '#fbd4c9',
+                    300: '#f7b5a3',
+                    400: '#f18c6e',
+                    500: '#d97757',
+                    600: '#c55438',
+                    700: '#a4432d',
+                    800: '#873829',
+                    900: '#713128',
                   },
-                  surface: {
-                    50: '#f8faf9',
-                    100: '#f1f5f4',
-                    200: '#e4ebe9',
-                    800: '#1a2220',
-                    850: '#141b19',
-                    900: '#0e1412',
-                    950: '#080c0b',
+                  ink: {
+                    50: '#fafafa',
+                    100: '#f4f4f5',
+                    200: '#e4e4e7',
+                    300: '#d4d4d8',
+                    400: '#a1a1aa',
+                    500: '#71717a',
+                    600: '#52525b',
+                    700: '#3f3f46',
+                    800: '#27272a',
+                    900: '#18181b',
                   }
                 },
                 fontFamily: {
-                  sans: ['DM Sans', 'system-ui', '-apple-system', 'sans-serif'],
-                  mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
-                },
-                boxShadow: {
-                  soft: '0 1px 2px rgba(15, 23, 20, 0.04), 0 4px 16px rgba(15, 23, 20, 0.04)',
-                  lift: '0 8px 30px rgba(15, 23, 20, 0.08)',
-                  glow: '0 0 0 1px rgba(20, 184, 166, 0.12), 0 8px 24px rgba(13, 148, 136, 0.15)',
+                  sans: ['Inter', 'PingFang SC', 'Microsoft YaHei', 'system-ui', 'sans-serif'],
+                  mono: ['JetBrains Mono', 'SFMono-Regular', 'Consolas', 'monospace'],
                 },
                 borderRadius: {
-                  '2xl': '1rem',
-                  '3xl': '1.25rem',
+                  DEFAULT: '0.625rem',
                 }
               }
             }
@@ -82,118 +78,252 @@ export const Layout = (props) => {
         </script>
         <style>
           :root {
-            --bg: #f6f8f7;
-            --fg: #0f1a17;
-            --muted: #5c6b66;
-            --card: #ffffff;
-            --border: #e2eae7;
-            --ring: #14b8a6;
+            --radius: 0.625rem;
+            --brand: #d97757;
+            --brand-400: #f18c6e;
+            --brand-600: #c55438;
+            --background: hsl(60 20% 99%);
+            --foreground: #271610;
+            --card: hsl(60 20% 99%);
+            --card-foreground: #33170f;
+            --muted: #f7ebdf;
+            --muted-foreground: #816055;
+            --secondary: #fbe7da;
+            --secondary-foreground: #873829;
+            --border: rgba(137, 110, 96, 0.38);
+            --input: rgba(137, 110, 96, 0.45);
+            --ring: rgba(217, 119, 87, 0.55);
+            --primary: #d97757;
+            --primary-foreground: #fffaf7;
+            --destructive: #ef4444;
+            --shadow: 0 1px 3px rgba(39, 22, 16, 0.08), 0 1px 2px rgba(39, 22, 16, 0.04);
+            --shadow-md: 0 4px 12px rgba(39, 22, 16, 0.08);
           }
           html.dark {
-            --bg: #0a0f0e;
-            --fg: #e8efec;
-            --muted: #8a9a94;
-            --card: #121a18;
-            --border: #24302c;
-            --ring: #2dd4bf;
+            --background: #10131c;
+            --foreground: #f9f4f1;
+            --card: #10131c;
+            --card-foreground: #f6eee8;
+            --muted: #1c2131;
+            --muted-foreground: #cfb8af;
+            --secondary: #1d2232;
+            --secondary-foreground: #fde8e2;
+            --border: rgba(255, 255, 255, 0.08);
+            --input: rgba(255, 255, 255, 0.12);
+            --ring: rgba(241, 140, 110, 0.45);
+            --primary: #f18c6e;
+            --primary-foreground: #30160f;
+            --destructive: #f87171;
+            --shadow: 0 1px 0 rgba(255,255,255,0.04) inset;
+            --shadow-md: 0 8px 24px rgba(0,0,0,0.35);
           }
+          * { box-sizing: border-box; border-color: var(--border); }
           body {
-            font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
-            position: relative;
+            margin: 0;
             min-height: 100vh;
-            background: var(--bg);
-            color: var(--fg);
+            font-family: Inter, 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+            background: var(--background);
+            color: var(--foreground);
             -webkit-font-smoothing: antialiased;
+            background-image:
+              radial-gradient(1100px circle at 5% -10%, rgba(217, 119, 87, 0.18), transparent 60%),
+              radial-gradient(900px circle at 90% 0%, rgba(96, 165, 250, 0.10), transparent 65%),
+              linear-gradient(180deg, rgba(255, 247, 242, 0.98), rgba(255, 247, 242, 1));
+            background-attachment: fixed;
           }
-          body::before {
-            content: '';
-            position: fixed;
-            inset: 0;
-            z-index: -2;
-            background:
-              radial-gradient(ellipse 90% 55% at 50% -15%, rgba(20, 184, 166, 0.10) 0%, transparent 55%),
-              radial-gradient(ellipse 50% 35% at 100% 20%, rgba(45, 212, 191, 0.06) 0%, transparent 50%),
-              radial-gradient(ellipse 40% 30% at 0% 70%, rgba(15, 118, 110, 0.05) 0%, transparent 50%);
-            pointer-events: none;
+          html.dark body {
+            background-image:
+              radial-gradient(900px circle at 15% -5%, rgba(241, 140, 110, 0.28), transparent 65%),
+              radial-gradient(800px circle at 82% 0%, rgba(56, 189, 248, 0.14), transparent 70%),
+              linear-gradient(180deg, #10131c, #0a0c14);
           }
-          html.dark body::before {
-            background:
-              radial-gradient(ellipse 90% 55% at 50% -15%, rgba(20, 184, 166, 0.14) 0%, transparent 55%),
-              radial-gradient(ellipse 50% 35% at 100% 20%, rgba(45, 212, 191, 0.07) 0%, transparent 50%),
-              radial-gradient(ellipse 40% 30% at 0% 70%, rgba(15, 118, 110, 0.08) 0%, transparent 50%);
-          }
-          body::after {
-            content: '';
-            position: fixed;
-            inset: 0;
-            z-index: -1;
-            opacity: 0.35;
-            pointer-events: none;
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-            background-size: 180px 180px;
-          }
-          html.dark body::after { opacity: 0.12; }
           [x-cloak] { display: none !important; }
-          .ui-card {
+          ::selection { background: color-mix(in srgb, var(--primary) 35%, transparent); }
+
+          .mm-card {
             background: var(--card);
+            color: var(--card-foreground);
             border: 1px solid var(--border);
-            border-radius: 1.1rem;
-            box-shadow: 0 1px 2px rgba(15, 23, 20, 0.03);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
           }
-          html.dark .ui-card {
-            box-shadow: 0 1px 0 rgba(255,255,255,0.03) inset;
-          }
-          .ui-input {
+          .mm-card:hover { box-shadow: var(--shadow-md); }
+          .mm-input, .mm-select, .mm-textarea {
             width: 100%;
-            border-radius: 0.75rem;
-            border: 1px solid var(--border);
-            background: color-mix(in srgb, var(--card) 88%, var(--bg));
-            color: var(--fg);
-            padding: 0.625rem 0.9rem;
-            transition: border-color .15s, box-shadow .15s, background .15s;
+            border: 1px solid var(--input);
+            background: color-mix(in srgb, var(--card) 88%, var(--muted));
+            color: var(--foreground);
+            border-radius: calc(var(--radius) - 2px);
+            padding: 0.55rem 0.8rem;
+            font-size: 0.875rem;
+            transition: border-color .15s, box-shadow .15s;
           }
-          .ui-input:focus {
+          .mm-textarea { resize: vertical; min-height: 7rem; line-height: 1.5; }
+          .mm-input:focus, .mm-select:focus, .mm-textarea:focus {
             outline: none;
-            border-color: color-mix(in srgb, var(--ring) 55%, var(--border));
-            box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 22%, transparent);
+            border-color: color-mix(in srgb, var(--primary) 55%, var(--border));
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 45%, transparent);
           }
-          .ui-chip {
+          .mm-label {
+            display: block;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            color: var(--muted-foreground);
+            margin-bottom: 0.4rem;
+          }
+          .mm-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--foreground);
+            letter-spacing: -0.01em;
+          }
+          .mm-desc {
+            font-size: 0.8125rem;
+            color: var(--muted-foreground);
+            line-height: 1.45;
+          }
+          .mm-btn {
             display: inline-flex;
             align-items: center;
-            gap: 0.35rem;
-            border-radius: 999px;
+            justify-content: center;
+            gap: 0.45rem;
+            border-radius: calc(var(--radius) - 2px);
+            font-size: 0.875rem;
+            font-weight: 500;
+            border: 1px solid transparent;
+            padding: 0.55rem 0.95rem;
+            transition: background .15s, color .15s, border-color .15s, opacity .15s;
+            cursor: pointer;
+            white-space: nowrap;
+          }
+          .mm-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+          .mm-btn-primary {
+            background: var(--primary);
+            color: var(--primary-foreground);
+          }
+          .mm-btn-primary:hover:not(:disabled) {
+            background: color-mix(in srgb, var(--primary) 88%, #000);
+          }
+          .mm-btn-secondary {
+            background: var(--secondary);
+            color: var(--secondary-foreground);
+            border-color: var(--border);
+          }
+          .mm-btn-secondary:hover:not(:disabled) {
+            background: color-mix(in srgb, var(--secondary) 80%, var(--primary));
+          }
+          .mm-btn-ghost {
+            background: transparent;
+            color: var(--muted-foreground);
+            border-color: var(--border);
+          }
+          .mm-btn-ghost:hover:not(:disabled) {
+            background: var(--muted);
+            color: var(--foreground);
+          }
+          .mm-btn-danger {
+            background: color-mix(in srgb, var(--destructive) 12%, transparent);
+            color: var(--destructive);
+            border-color: color-mix(in srgb, var(--destructive) 28%, transparent);
+          }
+          .mm-btn-danger:hover:not(:disabled) {
+            background: color-mix(in srgb, var(--destructive) 18%, transparent);
+          }
+          .mm-btn-icon {
+            width: 2.25rem;
+            height: 2.25rem;
+            padding: 0;
+          }
+          .mm-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
             border: 1px solid var(--border);
-            background: color-mix(in srgb, var(--card) 70%, var(--bg));
-            padding: 0.2rem 0.65rem;
-            font-size: 0.75rem;
-            color: var(--muted);
-          }
-          .ui-toggle {
-            width: 2.75rem;
-            height: 1.5rem;
+            background: color-mix(in srgb, var(--muted) 70%, transparent);
+            color: var(--muted-foreground);
             border-radius: 999px;
-            background: #c5d0cc;
-            position: relative;
-            transition: background .2s;
+            padding: 0.15rem 0.6rem;
+            font-size: 0.72rem;
+            font-weight: 500;
           }
-          html.dark .ui-toggle { background: #2a3834; }
-          .peer:checked ~ .ui-toggle { background: #0d9488; }
-          .ui-toggle::after {
+          .mm-tab {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.45rem 0.85rem;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            color: var(--muted-foreground);
+            border: 1px solid transparent;
+            border-radius: calc(var(--radius) - 2px);
+            background: transparent;
+            cursor: pointer;
+            transition: all .15s;
+          }
+          .mm-tab[data-active="true"], .mm-tab.is-active {
+            background: var(--card);
+            color: var(--primary);
+            border-color: var(--border);
+            box-shadow: var(--shadow);
+          }
+          .mm-tab-bar {
+            display: inline-flex;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+            padding: 0.25rem;
+            background: var(--muted);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+          }
+          .mm-switch {
+            position: relative;
+            width: 2.5rem;
+            height: 1.4rem;
+            border-radius: 999px;
+            background: color-mix(in srgb, var(--muted-foreground) 28%, transparent);
+            transition: background .15s;
+            flex-shrink: 0;
+          }
+          .peer:checked ~ .mm-switch { background: var(--primary); }
+          .mm-switch::after {
             content: '';
             position: absolute;
             top: 2px; left: 2px;
-            width: 1.25rem; height: 1.25rem;
+            width: 1.05rem; height: 1.05rem;
             border-radius: 999px;
             background: #fff;
-            box-shadow: 0 1px 2px rgba(0,0,0,.12);
-            transition: transform .2s;
+            box-shadow: 0 1px 2px rgba(0,0,0,.15);
+            transition: transform .15s;
           }
-          .peer:checked ~ .ui-toggle::after { transform: translateX(1.25rem); }
-          ::selection {
-            background: color-mix(in srgb, var(--ring) 35%, transparent);
+          .peer:checked ~ .mm-switch::after { transform: translateX(1.05rem); }
+          .mm-check {
+            width: 1rem; height: 1rem;
+            border-radius: 0.25rem;
+            border: 1px solid var(--input);
+            accent-color: var(--primary);
           }
-          textarea, input, select, button { font-family: inherit; }
+          .mm-section-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+          }
+          .mm-section-head .icon {
+            width: 2rem; height: 2rem;
+            border-radius: calc(var(--radius) - 2px);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: color-mix(in srgb, var(--primary) 12%, transparent);
+            color: var(--primary);
+            flex-shrink: 0;
+          }
           .font-mono, .font-mono * { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+          textarea, input, select, button { font-family: inherit; }
+          @media (max-width: 767px) {
+            input, select, textarea { font-size: 16px !important; }
+          }
         </style>
         <script>
           function appData() {
@@ -202,41 +332,35 @@ export const Layout = (props) => {
               toggleDarkMode() {
                 this.darkMode = !this.darkMode;
                 localStorage.setItem('theme', this.darkMode ? 'dark' : 'light');
-                if (this.darkMode) {
-                  document.documentElement.classList.add('dark');
-                } else {
-                  document.documentElement.classList.remove('dark');
-                }
+                document.documentElement.classList.toggle('dark', this.darkMode);
+                const meta = document.querySelector('meta[name="theme-color"]');
+                if (meta) meta.setAttribute('content', this.darkMode ? '#10131c' : '#fffaf7');
               },
               init() {
-                if (this.darkMode) {
-                  document.documentElement.classList.add('dark');
-                }
+                document.documentElement.classList.toggle('dark', this.darkMode);
+                const meta = document.querySelector('meta[name="theme-color"]');
+                if (meta) meta.setAttribute('content', this.darkMode ? '#10131c' : '#fffaf7');
               }
             }
           }
 
           function updateChecker(currentVersion, apiUrl) {
             return {
-              currentVersion: currentVersion,
+              currentVersion,
               latestVersion: '',
               showUpdateToast: false,
               i18n: {
                 newVersionAvailable: getUpdateI18n('newVersionAvailable'),
-                currentVersion: getUpdateI18n('currentVersion'),
                 viewRelease: getUpdateI18n('viewRelease'),
                 updateGuide: getUpdateI18n('updateGuide'),
                 later: getUpdateI18n('later')
               },
-              init() {
-                setTimeout(() => this.checkForUpdates(), 3000);
-              },
+              init() { setTimeout(() => this.checkForUpdates(), 3000); },
               async checkForUpdates() {
                 try {
                   const dismissedVersion = localStorage.getItem('sublink_dismissed_version');
                   const lastCheck = localStorage.getItem('sublink_last_version_check');
                   const now = Date.now();
-
                   if (lastCheck && (now - parseInt(lastCheck)) < 3600000) {
                     const cachedVersion = localStorage.getItem('sublink_latest_version');
                     if (cachedVersion && cachedVersion !== dismissedVersion && this.compareVersions(cachedVersion, this.currentVersion) > 0) {
@@ -245,35 +369,23 @@ export const Layout = (props) => {
                     }
                     return;
                   }
-
-                  const response = await fetch(apiUrl, {
-                    headers: { 'Accept': 'application/vnd.github.v3+json' }
-                  });
-
+                  const response = await fetch(apiUrl, { headers: { 'Accept': 'application/vnd.github.v3+json' } });
                   if (!response.ok) return;
-
                   const data = await response.json();
                   const latestVersion = (data.tag_name || '').replace(/^v/, '');
-
                   localStorage.setItem('sublink_latest_version', latestVersion);
                   localStorage.setItem('sublink_last_version_check', now.toString());
-
                   if (latestVersion && latestVersion !== dismissedVersion && this.compareVersions(latestVersion, this.currentVersion) > 0) {
                     this.latestVersion = latestVersion;
                     this.showUpdateToast = true;
                   }
-                } catch (error) {
-                  console.debug('Version check failed:', error.message);
-                }
+                } catch (e) { console.debug('Version check failed:', e.message); }
               },
               compareVersions(v1, v2) {
-                const parts1 = v1.split('.').map(Number);
-                const parts2 = v2.split('.').map(Number);
-                for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
-                  const p1 = parts1[i] || 0;
-                  const p2 = parts2[i] || 0;
-                  if (p1 > p2) return 1;
-                  if (p1 < p2) return -1;
+                const a = v1.split('.').map(Number), b = v2.split('.').map(Number);
+                for (let i = 0; i < Math.max(a.length, b.length); i++) {
+                  const x = a[i] || 0, y = b[i] || 0;
+                  if (x > y) return 1; if (x < y) return -1;
                 }
                 return 0;
               },
@@ -287,48 +399,18 @@ export const Layout = (props) => {
           function getUpdateI18n(key) {
             const lang = navigator.language || 'en-US';
             const translations = {
-              'zh-CN': {
-                newVersionAvailable: '发现新版本',
-                currentVersion: '当前版本',
-                viewRelease: '查看更新',
-                updateGuide: '更新指南',
-                later: '稍后提醒'
-              },
-              'zh-TW': {
-                newVersionAvailable: '發現新版本',
-                currentVersion: '當前版本',
-                viewRelease: '查看更新',
-                updateGuide: '更新指南',
-                later: '稍後提醒'
-              },
-              'en-US': {
-                newVersionAvailable: 'New Version Available',
-                currentVersion: 'Current',
-                viewRelease: 'View Release',
-                updateGuide: 'Update Guide',
-                later: 'Later'
-              },
-              'fa': {
-                newVersionAvailable: 'نسخه جدید موجود است',
-                currentVersion: 'نسخه فعلی',
-                viewRelease: 'مشاهده نسخه',
-                updateGuide: 'راهنمای به‌روزرسانی',
-                later: 'بعداً'
-              },
-              'ru': {
-                newVersionAvailable: 'Доступна новая версия',
-                currentVersion: 'Текущая',
-                viewRelease: 'Посмотреть',
-                updateGuide: 'Руководство по обновлению',
-                later: 'Позже'
-              }
+              'zh-CN': { newVersionAvailable: '发现新版本', viewRelease: '查看更新', updateGuide: '更新指南', later: '稍后' },
+              'zh-TW': { newVersionAvailable: '發現新版本', viewRelease: '查看更新', updateGuide: '更新指南', later: '稍後' },
+              'en-US': { newVersionAvailable: 'New Version Available', viewRelease: 'View Release', updateGuide: 'Update Guide', later: 'Later' },
+              'fa': { newVersionAvailable: 'نسخه جدید موجود است', viewRelease: 'مشاهده نسخه', updateGuide: 'راهنما', later: 'بعداً' },
+              'ru': { newVersionAvailable: 'Доступна новая версия', viewRelease: 'Посмотреть', updateGuide: 'Гайд', later: 'Позже' }
             };
             const langKey = Object.keys(translations).find(k => lang.startsWith(k.split('-')[0])) || 'en-US';
             return translations[langKey][key] || translations['en-US'][key];
           }
         </script>
       </head>
-      <body class="bg-surface-50 dark:bg-surface-950 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+      <body>
         ${children}
       </body>
     </html>
