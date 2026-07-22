@@ -366,8 +366,10 @@ export const NodeLibrary = (props) => {
               if (convert && typeof data.submitForm === 'function') {
                 data.submitForm();
                 try { Alpine.store('ui')?.setPage('subscribe'); } catch {}
+                try { window.__SUBLINK_UI__?.setPage?.('subscribe'); } catch {}
               } else {
                 try { Alpine.store('ui')?.setPage('generate'); } catch {}
+                try { window.__SUBLINK_UI__?.setPage?.('generate'); } catch {}
               }
               this.persistMessage(convert ? '已用选中节点生成订阅' : '已填入转换输入框');
               return;
@@ -420,7 +422,12 @@ export const NodeLibrary = (props) => {
   return (
     <div id="nodes" x-data="nodeLibraryData()" x-init="init()" class="space-y-4">
       {/* Login gate */}
-      <div x-show="bootstrapped && authRequired && !authenticated" x-cloak class="mm-card max-w-md">
+      <div x-show="!bootstrapped" class="mm-card p-8 text-center">
+        <i class="fas fa-spinner fa-spin text-[var(--primary)]"></i>
+        <p class="mm-desc mt-2">加载节点库…</p>
+      </div>
+
+      <div x-show="bootstrapped && authRequired && !authenticated" class="mm-card max-w-md">
         <div class="border-b border-[var(--border)] px-5 py-4">
           <h2 class="text-lg font-semibold tracking-tight">登录节点库</h2>
           <p class="mm-desc mt-1">密码鉴权后节点将同步到服务端 KV，可跨设备访问。</p>
@@ -445,7 +452,7 @@ export const NodeLibrary = (props) => {
         </div>
       </div>
 
-      <div x-show="bootstrapped && authenticated" x-cloak class="mm-card p-4 sm:p-5">
+      <div x-show="bootstrapped && authenticated" class="mm-card p-4 sm:p-5">
         <div class="mm-section-head">
           <div class="flex items-start gap-3">
             <span class="icon"><i class="fas fa-network-wired text-sm"></i></span>

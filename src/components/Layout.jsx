@@ -326,37 +326,49 @@ export const Layout = (props) => {
           }
         </style>
         <script>
-          document.addEventListener('alpine:init', () => {
-            const saved = localStorage.getItem('sublink_page') || 'generate';
-            Alpine.store('ui', {
-              page: ['generate', 'nodes', 'subscribe'].includes(saved) ? saved : 'generate',
-              setPage(p) {
-                if (!['generate', 'nodes', 'subscribe'].includes(p)) return;
-                this.page = p;
-                localStorage.setItem('sublink_page', p);
-                if (p === 'subscribe') {
-                  setTimeout(() => {
-                    const el = document.getElementById('results');
-                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  }, 40);
-                } else {
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }
-                try {
-                  history.replaceState(null, '', '#' + p);
-                } catch {}
+          window.__SUBLINK_UI__ = window.__SUBLINK_UI__ || {
+            page: (function () {
+              try {
+                const saved = localStorage.getItem('sublink_page') || 'generate';
+                if (['generate', 'nodes', 'subscribe'].includes(saved)) return saved;
+              } catch {}
+              return 'generate';
+            })(),
+            setPage(p) {
+              if (!['generate', 'nodes', 'subscribe'].includes(p)) return;
+              this.page = p;
+              try { localStorage.setItem('sublink_page', p); } catch {}
+              try { history.replaceState(null, '', '#' + p); } catch {}
+              window.dispatchEvent(new CustomEvent('sublink-page', { detail: { page: p } }));
+              if (p === 'subscribe') {
+                setTimeout(() => {
+                  const el = document.getElementById('results');
+                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 40);
+              } else {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
               }
+            }
+          };
+
+          document.addEventListener('alpine:init', () => {
+            Alpine.store('ui', {
+              get page() { return window.__SUBLINK_UI__.page; },
+              set page(v) { window.__SUBLINK_UI__.page = v; },
+              setPage(p) { window.__SUBLINK_UI__.setPage(p); }
             });
           });
 
           function appData() {
             return {
               darkMode: localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches),
-              get page() {
-                return Alpine.store('ui')?.page || 'generate';
-              },
+              page: window.__SUBLINK_UI__.page,
               setPage(p) {
-                Alpine.store('ui')?.setPage(p);
+                window.__SUBLINK_UI__.setPage(p);
+                this.page = window.__SUBLINK_UI__.page;
+              },
+              isPage(p) {
+                return this.page === p;
               },
               toggleDarkMode() {
                 this.darkMode = !this.darkMode;
@@ -373,11 +385,14 @@ export const Layout = (props) => {
                 const map = { workspace: 'generate', results: 'subscribe' };
                 const page = map[hash] || hash;
                 if (['generate', 'nodes', 'subscribe'].includes(page)) {
-                  Alpine.store('ui')?.setPage(page);
+                  this.setPage(page);
                 }
+                window.addEventListener('sublink-page', (e) => {
+                  this.page = e.detail?.page || window.__SUBLINK_UI__.page;
+                });
                 window.addEventListener('hashchange', () => {
                   const h = (location.hash || '').replace('#', '');
-                  if (['generate', 'nodes', 'subscribe'].includes(h)) Alpine.store('ui')?.setPage(h);
+                  if (['generate', 'nodes', 'subscribe'].includes(h)) this.setPage(h);
                 });
               }
             }

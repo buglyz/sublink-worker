@@ -27,8 +27,9 @@ export const Navbar = () => {
               <button
                 type="button"
                 class="mm-btn px-3 py-2 text-sm"
-                x-on:click={`$store.ui.setPage('${item.id}')`}
-                x-bind:class={`$store.ui.page === '${item.id}' ? 'mm-btn-secondary text-[var(--primary)]' : 'mm-btn-ghost text-[var(--muted-foreground)]'`}
+                data-page={item.id}
+                x-on:click="setPage($el.dataset.page)"
+                x-bind:class={`page === '${item.id}' ? 'mm-btn-secondary text-[var(--primary)]' : 'mm-btn-ghost text-[var(--muted-foreground)]'`}
               >
                 <i class={`fas ${item.icon} text-xs opacity-80`}></i>
                 <span>{item.label}</span>
@@ -68,7 +69,6 @@ export const Navbar = () => {
           >
             <i class="fas text-[14px]" x-bind:class="darkMode ? 'fa-sun' : 'fa-moon'"></i>
           </button>
-          {/* Mobile menu */}
           <div class="relative md:hidden" x-data="{ open: false }">
             <button type="button" class="mm-btn mm-btn-ghost mm-btn-icon" x-on:click="open = !open" aria-label="菜单">
               <i class="fas fa-bars text-sm"></i>
@@ -77,14 +77,15 @@ export const Navbar = () => {
               x-show="open"
               x-cloak
               {...{ 'x-on:click.outside': 'open = false' }}
-              class="absolute right-0 top-11 w-44 mm-card p-1.5 shadow-md"
+              class="absolute right-0 top-11 w-44 mm-card p-1.5 shadow-md z-50"
             >
               {NAV.map((item) => (
                 <button
                   type="button"
                   class="mm-btn mm-btn-ghost w-full justify-start px-3 py-2 text-sm"
-                  x-on:click={`$store.ui.setPage('${item.id}'); open = false`}
-                  x-bind:class={`$store.ui.page === '${item.id}' ? 'text-[var(--primary)]' : ''`}
+                  data-page={item.id}
+                  x-on:click="setPage($el.dataset.page); open = false"
+                  x-bind:class={`page === '${item.id}' ? 'text-[var(--primary)]' : ''`}
                 >
                   <i class={`fas ${item.icon} text-xs w-4`}></i>
                   {item.label}

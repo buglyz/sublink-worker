@@ -58,7 +58,7 @@ export const Form = (props) => {
   return (
     <div id="workspace" x-data="formData()" x-init="init()">
       {/* ========== Page: 生成订阅 (like /generator) ========== */}
-      <section x-show="$store.ui.page === 'generate'" x-cloak class="mx-auto space-y-6">
+      <section x-show="$root.page === 'generate'" class="mx-auto space-y-6">
         <div class="space-y-2">
           <h1 class="text-3xl font-bold tracking-tight text-[var(--foreground)]">订阅链接生成器</h1>
           <p class="text-[var(--muted-foreground)]">
@@ -103,7 +103,7 @@ export const Form = (props) => {
                 <button
                   type="button"
                   class="mm-btn mm-btn-secondary py-2.5"
-                  x-on:click="window.dispatchEvent(new CustomEvent('nodes-import-from-input')); Alpine.store('ui').setPage('nodes')"
+                  x-on:click="window.dispatchEvent(new CustomEvent('nodes-import-from-input')); (window.__SUBLINK_UI__||{}).setPage?.('nodes')"
                 >
                   <i class="fas fa-bookmark text-xs"></i>
                   存入节点库
@@ -303,19 +303,22 @@ export const Form = (props) => {
       </section>
 
       {/* ========== Page: 节点管理 (like /nodes) ========== */}
-      <section x-show="$store.ui.page === 'nodes'" x-cloak class="space-y-4">
+      <section x-show="$root.page === 'nodes'" class="space-y-4">
         <div>
           <h1 class="text-3xl font-semibold tracking-tight">节点管理</h1>
           <p class="text-[var(--muted-foreground)] mt-2">
-            本地保存节点，勾选后批量填入生成器并转换订阅。数据仅存浏览器。
+            登录后节点同步到服务端 KV，可跨设备管理；勾选后批量生成订阅。
           </p>
         </div>
         <NodeLibrary t={t} />
       </section>
 
-      {/* ========== Page: 订阅链接 (like /subscription) ========== */}
-      <section x-show="$store.ui.page === 'subscribe' || ($store.ui.page === 'generate' && generatedLinks)" x-cloak class="space-y-4" x-bind:class="$store.ui.page === 'generate' ? 'mt-6' : ''">
-        <div x-show="$store.ui.page === 'subscribe'">
+      <section
+        x-show="$root.page === 'subscribe' || ($root.page === 'generate' && generatedLinks)"
+        class="space-y-4"
+        x-bind:class="$root.page === 'generate' ? 'mt-6' : ''"
+      >
+        <div x-show="$root.page === 'subscribe'">
           <h1 class="text-3xl font-semibold tracking-tight">订阅链接</h1>
           <p class="text-[var(--muted-foreground)] mt-2">
             生成后的 Xray / Sing-Box / Clash / Surge 链接，可短链与复制。
@@ -333,7 +336,7 @@ export const Form = (props) => {
               <h2 class="text-lg font-semibold tracking-tight">{t('subscriptionLinks')}</h2>
               <p class="mm-desc mt-1">Clash / Sing-Box / Xray / Surge</p>
             </div>
-            <button type="button" class="mm-btn mm-btn-ghost text-sm" x-show="$store.ui.page !== 'generate'" x-on:click="Alpine.store('ui').setPage('generate')">
+            <button type="button" class="mm-btn mm-btn-ghost text-sm" x-show="$root.page !== 'generate'" x-on:click="(window.__SUBLINK_UI__||{}).setPage?.('generate')">
               <i class="fas fa-bolt text-xs"></i>
               返回生成
             </button>
@@ -385,9 +388,9 @@ export const Form = (props) => {
           </div>
         </div>
 
-        <div x-show="$store.ui.page === 'subscribe' && !generatedLinks" class="mm-card p-10 text-center">
+        <div x-show="$root.page === 'subscribe' && !generatedLinks" class="mm-card p-10 text-center">
           <p class="mm-desc mb-4">暂无订阅链接，请先生成。</p>
-          <button type="button" class="mm-btn mm-btn-primary" x-on:click="Alpine.store('ui').setPage('generate')">
+          <button type="button" class="mm-btn mm-btn-primary" x-on:click="(window.__SUBLINK_UI__||{}).setPage?.('generate')">
             <i class="fas fa-bolt text-xs"></i>
             去生成订阅
           </button>
