@@ -47,7 +47,9 @@ export const NodeLibrary = (props) => {
         nodes: [],
         pasteBox: '',
         remoteUrl: '',
+        importMode: 'replace',
         importing: false,
+        importReport: null,
         filter: '',
         selectAll: false,
         flash: '',
@@ -330,17 +332,6 @@ export const NodeLibrary = (props) => {
           }
         },
 
-        get filtered() {
-          const q = (this.filter || '').trim().toLowerCase();
-          if (!q) return this.nodes;
-          return this.nodes.filter((n) =>
-            (n.name || '').toLowerCase().includes(q) ||
-            (n.protocol || '').toLowerCase().includes(q) ||
-            (n.raw || '').toLowerCase().includes(q) ||
-            (n.tag || '').toLowerCase().includes(q)
-          );
-        },
-
         get selectedCount() {
           return this.nodes.filter((n) => n.selected && n.enabled !== false).length;
         },
@@ -431,12 +422,14 @@ export const NodeLibrary = (props) => {
             this.persistMessage('请填写有效的 http(s) 订阅地址');
             return;
           }
+          const mode = this.importMode === 'merge' ? 'merge' : 'replace';
           this.importing = true;
+          this.importReport = null;
           try {
             const res = await fetch('/api/nodes/import-url', {
               method: 'POST',
               headers: this.headers(true),
-              body: JSON.stringify({ url })
+              body: JSON.stringify({ url, mode })
             });
             const data = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(data.error || ('导入失败 ' + res.status));
@@ -447,10 +440,23 @@ export const NodeLibrary = (props) => {
               localStorage.setItem(LOCAL_MIRROR, this.lastSyncedJson);
               setTimeout(() => { this.suppressSync = false; }, 0);
             }
+            this.importReport = {
+              mode: data.mode || mode,
+              added: data.added || 0,
+              updated: data.updated || 0,
+              removed: data.removed || 0,
+              skipped: data.skipped || 0,
+              parsed: data.parsed || 0,
+              format: data.format || 'unknown',
+              source: data.source || url,
+              samples: data.samples || [],
+              message: data.message || ''
+            };
             this.persistMessage(data.message || ('已导入 ' + (data.added || 0) + ' 个'));
+            // keep remoteUrl for easy re-import / update
             this.pasteBox = '';
-            this.remoteUrl = '';
           } catch (e) {
+            this.importReport = { error: e.message || '远程导入失败' };
             this.persistMessage(e.message || '远程导入失败');
           } finally {
             this.importing = false;
@@ -538,6 +544,8 @@ export const NodeLibrary = (props) => {
               String(n.name || '').toLowerCase().includes(q) ||
               String(n.protocol || '').toLowerCase().includes(q) ||
               String(n.tag || '').toLowerCase().includes(q) ||
+              String(n.source || '').toLowerCase().includes(q) ||
+              String(n.sourceUrl || '').toLowerCase().includes(q) ||
               String(n.raw || '').toLowerCase().includes(q)
             );
           });
@@ -697,16 +705,48 @@ export const NodeLibrary = (props) => {
                 placeholder="每行一条：ss / vmess / vless / trojan / hysteria2 …&#10;也可只粘贴一条 http(s) 订阅地址，将自动远程拉取"
               ></textarea>
             </div>
-            <div>
-              <label class="mm-label">远程订阅 URL（可选）</label>
+            <div class="space-y-2">
+              <label class="mm-label">远程订阅 URL</label>
               <div class="flex gap-2">
                 <input type="url" class="mm-input font-mono text-xs flex-1" x-model="remoteUrl" placeholder="https://example.com/sub" />
                 <button type="button" class="mm-btn mm-btn-secondary mm-btn-sm shrink-0" x-on:click="importRemoteUrl()" x-bind:disabled="importing">
                   <i class="fas" x-bind:class={'importing ? "fa-spinner fa-spin" : "fa-cloud-download-alt"'}></i>
-                  <span x-text="importing ? '导入中…' : '拉取导入'"></span>
+                  <span x-text={'importing ? "导入中…" : "拉取导入"'}></span>
                 </button>
               </div>
-              <p class="text-[11px] text-muted mt-1">服务端拉取订阅并解析入库；失败会显示原因</p>
+              <div class="flex flex-wrap gap-3 text-xs">
+                <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                  <input type="radio" class="mm-check" name="importMode" value="replace" x-model="importMode" />
+                  更新替换（推荐）
+                </label>
+                <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                  <input type="radio" class="mm-check" name="importMode" value="merge" x-model="importMode" />
+                  合并追加
+                </label>
+              </div>
+              <p class="text-[11px] text-muted">更新替换：删除该订阅来源的旧节点后写入最新列表。合并追加：只补新节点并刷新已有元数据。</p>
+              <div class="border-2 border-[var(--border)] p-3 text-xs space-y-1" x-show="importReport" x-cloak>
+                <template x-if="importReport && importReport.error">
+                  <p class="text-red-500" x-text="importReport.error"></p>
+                </template>
+                <template x-if="importReport && !importReport.error">
+                  <div class="space-y-1">
+                    <p class="font-medium text-[var(--foreground)]" x-text="importReport.message"></p>
+                    <p class="text-muted">
+                      解析 <span x-text="importReport.parsed"></span>
+                      · 新增 <span x-text="importReport.added"></span>
+                      · 更新 <span x-text="importReport.updated"></span>
+                      · 移除 <span x-text="importReport.removed"></span>
+                      · 跳过 <span x-text="importReport.skipped"></span>
+                      · 格式 <span x-text="importReport.format"></span>
+                    </p>
+                    <p class="text-muted font-mono truncate" x-show="importReport.source" x-text="importReport.source"></p>
+                    <p class="text-muted" x-show="importReport.samples && importReport.samples.length">
+                      示例：<span x-text={'(importReport.samples || []).join(" · ")'}></span>
+                    </p>
+                  </div>
+                </template>
+              </div>
             </div>
           </div>
           <div class="lg:col-span-2 flex flex-col gap-2">

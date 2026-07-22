@@ -52,7 +52,7 @@ function normalizeNode(node) {
     if (!node || typeof node !== 'object') return null;
     const raw = String(node.raw || '').trim();
     if (!raw) return null;
-    return {
+    const out = {
         id: String(node.id || genId()),
         raw,
         name: String(node.name || '未命名').slice(0, 120),
@@ -63,6 +63,10 @@ function normalizeNode(node) {
         createdAt: Number(node.createdAt) || Date.now(),
         updatedAt: Date.now()
     };
+    // Keep subscription provenance for replace/update imports
+    if (node.source) out.source = String(node.source).slice(0, 512);
+    if (node.sourceUrl) out.sourceUrl = String(node.sourceUrl).slice(0, 512);
+    return out;
 }
 
 function genId() {

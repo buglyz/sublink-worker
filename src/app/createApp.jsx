@@ -184,6 +184,7 @@ export function createApp(bindings = {}) {
             const result = await services.nodeImport.importFromUrl(body.url || body.subscription || '', {
                 tag: body.tag,
                 name: body.name,
+                mode: body.mode === 'replace' ? 'replace' : 'merge',
                 userAgent: body.ua || getRequestHeader(c.req, 'User-Agent') || DEFAULT_USER_AGENT
             });
             return c.json(result);
