@@ -128,6 +128,13 @@ export const NodeLibrary = (props) => {
             localStorage.setItem(TOKEN_KEY, this.token);
             this.authenticated = true;
             this.password = '';
+            try {
+              if (window.Alpine && Alpine.store('auth')) {
+                Alpine.store('auth').token = this.token;
+                Alpine.store('auth').authenticated = true;
+              }
+            } catch {}
+            window.dispatchEvent(new CustomEvent('sublink-auth', { detail: { authenticated: true } }));
             await this.loadFromServer();
             // migrate local mirror if server empty
             try {
@@ -153,6 +160,14 @@ export const NodeLibrary = (props) => {
           localStorage.removeItem(TOKEN_KEY);
           this.authenticated = false;
           this.nodes = [];
+          try {
+            if (window.Alpine && Alpine.store('auth')) {
+              Alpine.store('auth').token = '';
+              Alpine.store('auth').authenticated = false;
+              Alpine.store('auth').nodeCount = 0;
+            }
+          } catch {}
+          window.dispatchEvent(new CustomEvent('sublink-auth', { detail: { authenticated: false } }));
         },
 
         async loadFromServer() {
@@ -329,8 +344,37 @@ export const NodeLibrary = (props) => {
           if (!this.nodes.length) return;
           if (!confirm('清空全部 ' + this.nodes.length + ' 个节点？')) return;
           this.nodes = [];
-          await this.syncNow();
+          try {
+            await fetch('/api/nodes', { method: 'DELETE', headers: this.headers() });
+          } catch {}
           this.persistMessage('节点库已清空');
+        },
+
+        subUrl() {
+          const t = this.token || (localStorage.getItem(TOKEN_KEY) || '');
+          const origin = window.location.origin;
+          if (!t) return origin + '/api/nodes/subscription';
+          return origin + '/api/nodes/subscription?token=' + encodeURIComponent(t);
+        },
+
+        copySubUrl() {
+          const url = this.subUrl();
+          navigator.clipboard.writeText(url).then(() => this.persistMessage('已复制节点库订阅链接')).catch(() => {
+            this.persistMessage(url);
+          });
+        },
+
+        get filtered() {
+          const q = String(this.filter || '').trim().toLowerCase();
+          if (!q) return this.nodes;
+          return this.nodes.filter((n) => {
+            return (
+              String(n.name || '').toLowerCase().includes(q) ||
+              String(n.protocol || '').toLowerCase().includes(q) ||
+              String(n.tag || '').toLowerCase().includes(q) ||
+              String(n.raw || '').toLowerCase().includes(q)
+            );
+          });
         },
 
         startEdit(node) {
@@ -462,6 +506,9 @@ export const NodeLibrary = (props) => {
               </p>
             </div>
             <div class="flex flex-wrap gap-1.5">
+              <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-on:click="copySubUrl()" x-show="authenticated">
+                <i class="fas fa-link text-[10px]"></i>复制节点库订阅
+              </button>
               <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-on:click="loadFromServer()">
                 <i class="fas fa-rotate text-[10px]"></i>刷新
               </button>

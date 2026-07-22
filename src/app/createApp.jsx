@@ -126,6 +126,50 @@ export function createApp(bindings = {}) {
         }
     });
 
+    // Miaomiaowu-style: export saved enabled nodes as a plain subscription (one URI per line).
+    // Auth: Bearer session token OR ?token= (same session token). Suitable as client sub URL.
+    app.get('/api/nodes/subscription', async (c) => {
+        try {
+            if (services.auth.isEnabled()) {
+                const token = extractBearerToken(c) || c.req.query('token') || '';
+                const ok = await services.auth.validateToken(token);
+                if (!ok) throw new UnauthorizedError();
+            }
+            const nodes = await requireNodeStorage(services.nodes).list();
+            const lines = nodes
+                .filter((n) => n && n.enabled !== false && n.raw)
+                .map((n) => String(n.raw).trim())
+                .filter(Boolean);
+            const body = lines.join('\n');
+            return c.text(body, 200, {
+                'Content-Type': 'text/plain; charset=utf-8',
+                'Profile-Update-Interval': '12',
+                'Cache-Control': 'no-store'
+            });
+        } catch (error) {
+            return handleError(c, error, runtime.logger);
+        }
+    });
+
+    app.get('/api/nodes/summary', requireAuth, async (c) => {
+        try {
+            const nodes = await requireNodeStorage(services.nodes).list();
+            const enabled = nodes.filter((n) => n.enabled !== false);
+            const byProto = {};
+            for (const n of enabled) {
+                const p = (n.protocol || 'unknown').toLowerCase();
+                byProto[p] = (byProto[p] || 0) + 1;
+            }
+            return c.json({
+                total: nodes.length,
+                enabled: enabled.length,
+                protocols: byProto
+            });
+        } catch (error) {
+            return handleError(c, error, runtime.logger);
+        }
+    });
+
     app.get('/', (c) => {
         const t = c.get('t');
         const lang = resolveLanguage(c.get('lang'));

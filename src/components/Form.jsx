@@ -53,6 +53,81 @@ export const Form = (props) => {
     window.APP_LANG = ${JSON.stringify(lang || 'zh-CN')};
     if (typeof __name === 'undefined') { var __name = function(fn) { return fn; }; }
     (${formLogicFn.toString()})();
+    function nodePickerData() {
+      return {
+        nodes: [],
+        loading: false,
+        error: '',
+        get selectedCount() {
+          return this.nodes.filter((n) => n.picked && n.enabled !== false).length;
+        },
+        get allSelected() {
+          const en = this.nodes.filter((n) => n.enabled !== false);
+          return en.length > 0 && en.every((n) => n.picked);
+        },
+        token() {
+          try { return Alpine.store('auth')?.token || localStorage.getItem('sublink_auth_token') || ''; } catch (e) { return localStorage.getItem('sublink_auth_token') || ''; }
+        },
+        async init() {
+          const self = this;
+          window.addEventListener('sublink-auth', () => self.load());
+          window.addEventListener('sublink-page', (e) => {
+            if (e.detail && e.detail.page === 'generate') self.load();
+          });
+          await this.load();
+        },
+        async load() {
+          this.error = '';
+          let authed = true;
+          try { authed = Alpine.store('auth')?.authenticated; } catch (e) {}
+          if (authed === false) {
+            this.nodes = [];
+            return;
+          }
+          this.loading = true;
+          try {
+            const headers = {};
+            const t = this.token();
+            if (t) headers.Authorization = 'Bearer ' + t;
+            const res = await fetch('/api/nodes', { headers });
+            if (res.status === 401) {
+              this.nodes = [];
+              this.error = '未登录';
+              return;
+            }
+            if (!res.ok) throw new Error('加载失败');
+            const data = await res.json();
+            const prev = new Set(this.nodes.filter((n) => n.picked).map((n) => n.id));
+            this.nodes = (data.nodes || []).map((n) => ({
+              ...n,
+              picked: prev.has(n.id) || !!n.selected
+            }));
+          } catch (e) {
+            this.error = e.message || '加载失败';
+          } finally {
+            this.loading = false;
+          }
+        },
+        toggleAll() {
+          const val = !this.allSelected;
+          this.nodes.forEach((n) => {
+            if (n.enabled !== false) n.picked = val;
+          });
+        },
+        fillSelected({ append }) {
+          const lines = this.nodes.filter((n) => n.picked && n.enabled !== false).map((n) => n.raw).filter(Boolean);
+          if (!lines.length) return;
+          const root = document.querySelector('#workspace');
+          try {
+            if (root && root._x_dataStack && root._x_dataStack[0]) {
+              const data = root._x_dataStack[0];
+              const block = lines.join('\\n');
+               data.input = append && data.input ? (String(data.input).trim() + '\\n' + block) : block;
+            }
+          } catch (e) {}
+        }
+      };
+    }
   `;
 
   return (
@@ -91,6 +166,59 @@ export const Form = (props) => {
                 class="mm-textarea font-mono text-[13px] min-h-[12rem]"
                 placeholder={t('urlPlaceholder')}
               ></textarea>
+
+              {/* 从节点库选择（妙妙屋：生成页先选节点） */}
+              <div
+                class="space-y-3 border-2 border-[var(--border)] p-3"
+                x-data="nodePickerData()"
+                x-init="init()"
+              >
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div>
+                    <div class="mm-label mb-0">选择节点库节点</div>
+                    <p class="text-muted text-xs">登录后从 KV 节点库勾选，一键填入输入框（对标妙妙屋生成器）</p>
+                  </div>
+                  <div class="flex flex-wrap gap-1.5">
+                    <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-on:click="load()" x-bind:disabled="loading">
+                      <i class="fas" x-bind:class="loading ? 'fa-spinner fa-spin' : 'fa-rotate'"></i>
+                      刷新
+                    </button>
+                    <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-on:click="fillSelected({ append: false })" x-bind:disabled="!selectedCount">
+                      填入选中
+                    </button>
+                    <button type="button" class="mm-btn mm-btn-primary mm-btn-sm" x-on:click="fillSelected({ append: true })" x-bind:disabled="!selectedCount">
+                      追加选中
+                    </button>
+                  </div>
+                </div>
+                <template x-if="!$store.auth.authenticated && $store.auth.authRequired">
+                  <p class="text-sm text-amber-700 dark:text-amber-400">请先登录节点库（右上角）</p>
+                </template>
+                <template x-if="$store.auth.authenticated">
+                  <div class="space-y-2">
+                    <div class="flex flex-wrap items-center gap-2 text-xs text-muted">
+                      <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                        <input type="checkbox" class="mm-check" x-bind:checked="allSelected" x-on:change="toggleAll()" />
+                        全选启用节点
+                      </label>
+                      <span x-text="(nodes?.length || 0) + ' 个 · 选中 ' + selectedCount"></span>
+                      <span x-show="error" class="text-red-500" x-text="error"></span>
+                    </div>
+                    <div class="max-h-48 overflow-y-auto border-2 border-[var(--border)] divide-y divide-[var(--border)]">
+                      <template x-if="!nodes.length">
+                        <div class="px-3 py-6 text-center text-muted text-sm">节点库为空，请到「节点管理」保存节点</div>
+                      </template>
+                      <template x-for="n in nodes" x-bind:key="n.id">
+                        <label class="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-[color-mix(in_srgb,var(--muted)_40%,transparent)]" x-bind:class="n.enabled === false ? 'opacity-40' : ''">
+                          <input type="checkbox" class="mm-check" x-model="n.picked" x-bind:disabled="n.enabled === false" />
+                          <span class="mm-chip text-[10px] uppercase" x-text="n.protocol || '?'"></span>
+                          <span class="text-sm font-medium truncate flex-1" x-text="n.name"></span>
+                        </label>
+                      </template>
+                    </div>
+                  </div>
+                </template>
+              </div>
 
               {/* 规则模式：自定义 / 模板（对标妙妙屋） */}
               <div class="space-y-3">

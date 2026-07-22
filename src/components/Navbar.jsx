@@ -59,7 +59,54 @@ export const Navbar = () => {
         </div>
 
         <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+          <span
+            class="hidden sm:inline-flex mm-chip font-mono text-[10px]"
+            x-show="$store.auth.authenticated && $store.auth.nodeCount"
+            x-text="($store.auth.nodeCount || 0) + ' nodes'"
+          ></span>
           <span class="hidden lg:inline-flex mm-chip font-mono text-[10px]">v{APP_VERSION}</span>
+
+          <template x-if="$store.auth.authRequired && !$store.auth.authenticated">
+            <div class="relative" x-data="{ open: false }">
+              <button type="button" class="mm-btn mm-btn-primary mm-btn-sm" x-on:click="open = !open">
+                <i class="fas fa-right-to-bracket text-xs"></i>
+                登录
+              </button>
+              <div
+                x-show="open"
+                x-cloak
+                class="absolute right-0 top-11 w-72 pixel-card mm-card p-4 shadow-lg z-[120]"
+                {...{ 'x-on:click.outside': 'open = false' }}
+              >
+                <p class="text-sm font-semibold mb-2">节点库登录</p>
+                <p class="text-muted text-xs mb-3">AUTH_PASSWORD · KV 跨设备同步</p>
+                <input
+                  type="password"
+                  class="mm-input mb-2"
+                  placeholder="管理密码"
+                  x-model="$store.auth.password"
+                  {...{ 'x-on:keydown.enter.prevent': '$store.auth.login()' }}
+                />
+                <p class="text-xs text-red-500 mb-2" x-show="$store.auth.error" x-text="$store.auth.error"></p>
+                <button
+                  type="button"
+                  class="mm-btn mm-btn-primary w-full"
+                  x-on:click="$store.auth.login().then(() => open = false)"
+                  x-bind:disabled="$store.auth.loading"
+                >
+                  确认登录
+                </button>
+              </div>
+            </div>
+          </template>
+
+          <template x-if="$store.auth.authenticated && $store.auth.authRequired">
+            <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-on:click="$store.auth.logout()" title="退出登录">
+              <i class="fas fa-right-from-bracket text-xs"></i>
+              <span class="hidden sm:inline">退出</span>
+            </button>
+          </template>
+
           <a href={DOCS_URL} target="_blank" rel="noopener noreferrer" class="mm-btn mm-btn-outline mm-btn-icon hidden sm:inline-flex" title="文档" aria-label="Docs">
             <i class="fas fa-book-open"></i>
           </a>

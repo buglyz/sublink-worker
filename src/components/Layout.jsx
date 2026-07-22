@@ -57,6 +57,85 @@ export const Layout = (props) => {
                 this.page = window.__SUBLINK_UI__.page;
               }
             });
+            Alpine.store('auth', {
+              token: localStorage.getItem('sublink_auth_token') || '',
+              authRequired: false,
+              authenticated: false,
+              kvReady: false,
+              loading: false,
+              password: '',
+              error: '',
+              nodeCount: 0,
+              async refresh() {
+                try {
+                  const st = await fetch('/api/auth/status').then((r) => r.json());
+                  this.authRequired = !!st.authRequired;
+                  this.kvReady = !!st.kvReady;
+                  if (!this.authRequired) {
+                    this.authenticated = true;
+                  } else if (this.token) {
+                    const me = await fetch('/api/auth/me', {
+                      headers: { Authorization: 'Bearer ' + this.token }
+                    });
+                    this.authenticated = me.ok;
+                    if (!me.ok) {
+                      this.token = '';
+                      localStorage.removeItem('sublink_auth_token');
+                    }
+                  } else {
+                    this.authenticated = false;
+                  }
+                  if (this.authenticated) {
+                    try {
+                      const sum = await fetch('/api/nodes/summary', {
+                        headers: this.token ? { Authorization: 'Bearer ' + this.token } : {}
+                      }).then((r) => (r.ok ? r.json() : null));
+                      if (sum) this.nodeCount = sum.enabled || sum.total || 0;
+                    } catch (e) {}
+                  }
+                } catch (e) {
+                  this.authenticated = !this.authRequired;
+                }
+              },
+              async login() {
+                this.loading = true;
+                this.error = '';
+                try {
+                  const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: this.password })
+                  });
+                  const data = await res.json().catch(() => ({}));
+                  if (!res.ok) throw new Error(data.error || '登录失败');
+                  this.token = data.token || '';
+                  localStorage.setItem('sublink_auth_token', this.token);
+                  this.password = '';
+                  this.authenticated = true;
+                  window.dispatchEvent(new CustomEvent('sublink-auth', { detail: { authenticated: true } }));
+                  await this.refresh();
+                } catch (e) {
+                  this.error = e.message || '登录失败';
+                  this.authenticated = false;
+                } finally {
+                  this.loading = false;
+                }
+              },
+              async logout() {
+                try {
+                  await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    headers: this.token ? { Authorization: 'Bearer ' + this.token } : {}
+                  });
+                } catch (e) {}
+                this.token = '';
+                localStorage.removeItem('sublink_auth_token');
+                this.authenticated = !this.authRequired;
+                this.nodeCount = 0;
+                window.dispatchEvent(new CustomEvent('sublink-auth', { detail: { authenticated: this.authenticated } }));
+              }
+            });
+            Alpine.store('auth').refresh();
           });
           function appData() {
             return {
