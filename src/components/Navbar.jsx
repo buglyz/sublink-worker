@@ -11,13 +11,13 @@ const NAV = [
 export const Navbar = () => {
   return (
     <header class="fixed top-0 left-0 right-0 z-[100] border-b border-[color:rgba(241,140,110,0.22)] bg-[color-mix(in_srgb,var(--background)_80%,transparent)] backdrop-blur supports-[backdrop-filter]:bg-[color-mix(in_srgb,var(--background)_60%,transparent)]">
-      <div class="flex h-16 items-center justify-between gap-3 px-4 sm:px-6 overflow-visible">
-        <div class="flex min-w-0 items-center gap-3 sm:gap-6">
-          <a href="/" class="flex shrink-0 items-center gap-3 font-semibold tracking-tight outline-none group">
+      <div class="flex h-16 items-center justify-between gap-2 sm:gap-3 px-3 sm:px-6 overflow-visible">
+        <div class="flex min-w-0 items-center gap-2 sm:gap-4">
+          <a href="/" class="flex shrink-0 items-center gap-2 sm:gap-3 font-semibold tracking-tight outline-none group">
             <img
               src="/logo.svg"
               alt="Sublink Worker"
-              class="h-10 w-10 border-2 border-[color:rgba(241,140,110,0.4)] shadow-[4px_4px_0_rgba(0,0,0,0.2)] bg-[var(--background)] object-cover"
+              class="h-9 w-9 sm:h-10 sm:w-10 border-2 border-[color:rgba(241,140,110,0.4)] shadow-[4px_4px_0_rgba(0,0,0,0.2)] bg-[var(--background)] object-cover"
               width="40"
               height="40"
             />
@@ -26,7 +26,7 @@ export const Navbar = () => {
             </span>
           </a>
 
-          <nav class="hidden md:flex items-center gap-2 md:gap-3">
+          <nav class="hidden md:flex items-center gap-2">
             {NAV.map((item) => (
               <button
                 type="button"
@@ -41,7 +41,7 @@ export const Navbar = () => {
             ))}
           </nav>
 
-          <nav class="md:hidden flex items-center gap-2">
+          <nav class="md:hidden flex items-center gap-1.5">
             {NAV.map((item) => (
               <button
                 type="button"
@@ -58,19 +58,44 @@ export const Navbar = () => {
           </nav>
         </div>
 
-        <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+        <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* 转换订阅：顶栏主操作 */}
+          <button
+            type="button"
+            class="mm-btn mm-btn-primary mm-btn-sm sm:px-4"
+            title="根据当前输入与规则生成订阅链接"
+            x-on:click="
+              try {
+                const root = document.querySelector('#workspace');
+                const data = root && root._x_dataStack && root._x_dataStack[0];
+                if (!data) return;
+                if (typeof data.submitForm === 'function') {
+                  data.submitForm();
+                  if (window.__SUBLINK_UI__) window.__SUBLINK_UI__.setPage('generate');
+                  setTimeout(() => {
+                    const el = document.getElementById('results');
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }, 200);
+                }
+              } catch (e) { console.error(e); }
+            "
+          >
+            <i class="fas fa-file-export text-xs"></i>
+            <span class="hidden xs:inline sm:inline">转换订阅</span>
+            <span class="sm:hidden">转换</span>
+          </button>
+
           <span
-            class="hidden sm:inline-flex mm-chip font-mono text-[10px]"
+            class="hidden lg:inline-flex mm-chip font-mono text-[10px]"
             x-show="$store.auth.authenticated && $store.auth.nodeCount"
             x-text="($store.auth.nodeCount || 0) + ' nodes'"
           ></span>
-          <span class="hidden lg:inline-flex mm-chip font-mono text-[10px]">v{APP_VERSION}</span>
 
           <template x-if="$store.auth.authRequired && !$store.auth.authenticated">
             <div class="relative" x-data="{ open: false }">
-              <button type="button" class="mm-btn mm-btn-primary mm-btn-sm" x-on:click="open = !open">
+              <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-on:click="open = !open">
                 <i class="fas fa-right-to-bracket text-xs"></i>
-                登录
+                <span class="hidden sm:inline">登录</span>
               </button>
               <div
                 x-show="open"
@@ -101,16 +126,12 @@ export const Navbar = () => {
           </template>
 
           <template x-if="$store.auth.authenticated && $store.auth.authRequired">
-            <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-on:click="$store.auth.logout()" title="退出登录">
+            <button type="button" class="mm-btn mm-btn-outline mm-btn-icon" x-on:click="$store.auth.logout()" title="退出登录">
               <i class="fas fa-right-from-bracket text-xs"></i>
-              <span class="hidden sm:inline">退出</span>
             </button>
           </template>
 
-          <a href={DOCS_URL} target="_blank" rel="noopener noreferrer" class="mm-btn mm-btn-outline mm-btn-icon hidden sm:inline-flex" title="文档" aria-label="Docs">
-            <i class="fas fa-book-open"></i>
-          </a>
-          <a href={GITHUB_REPO} target="_blank" rel="noopener noreferrer" class="mm-btn mm-btn-outline mm-btn-icon" title="GitHub" aria-label="GitHub">
+          <a href={GITHUB_REPO} target="_blank" rel="noopener noreferrer" class="mm-btn mm-btn-outline mm-btn-icon hidden sm:inline-flex" title="GitHub" aria-label="GitHub">
             <i class="fab fa-github"></i>
           </a>
           <button type="button" class="mm-btn mm-btn-outline mm-btn-icon" x-on:click="toggleDarkMode()" title="主题" aria-label="Toggle theme">

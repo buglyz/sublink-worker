@@ -148,26 +148,49 @@ export const Form = (props) => {
               <div class="card-title text-base">{t('shareUrls')}</div>
               <div class="card-desc">{t('urlPlaceholder')}</div>
             </div>
-            <div class="card-content space-y-5 pt-4">
-              <div class="flex flex-wrap gap-2 justify-end">
-                <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-on:click="navigator.clipboard.readText().then(text => input = text).catch(() => {})">
-                  <i class="fas fa-paste"></i>{t('paste')}
+                        <div class="card-content space-y-5 pt-4">
+              {/* 顶部操作：解析 / 保存 */}
+              <div class="flex flex-col sm:flex-row gap-2">
+                <button type="button" class="mm-btn mm-btn-primary flex-1" x-on:click="parseNodes()" x-bind:disabled="!input || !String(input).trim()">
+                  <i class="fas fa-magnifying-glass"></i>
+                  解析节点
                 </button>
-                <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-show="input" x-on:click="input = ''">
-                  <i class="fas fa-times"></i>{t('clear')}
+                <button
+                  type="button"
+                  class="mm-btn mm-btn-outline flex-1"
+                  x-on:click="saveNodes()"
+                  x-bind:disabled="!input || !String(input).trim()"
+                >
+                  <i class="fas fa-floppy-disk"></i>
+                  保存节点
+                </button>
+                <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-on:click="navigator.clipboard.readText().then(text => input = text).catch(() => {})">
+                  <i class="fas fa-paste"></i>粘贴
+                </button>
+                <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-show="input" x-on:click="input = ''; parsePreview = null; parseMessage = ''">
+                  <i class="fas fa-times"></i>清空
                 </button>
               </div>
+              <p class="text-sm text-[var(--primary)]" x-show="parseMessage" x-text="parseMessage"></p>
+              <div
+                class="border-2 border-[var(--border)] bg-[color-mix(in_srgb,var(--muted)_35%,transparent)] px-3 py-2.5 text-sm space-y-1"
+                x-show="parsePreview"
+              >
+                <div class="font-medium">解析预览</div>
+                <div class="text-muted font-mono text-xs" x-text="parsePreview ? ('行数 ' + parsePreview.lines + ' · 节点 ' + parsePreview.linkCount + ' · 订阅 ' + parsePreview.subCount) : ''"></div>
+              </div>
+
               <textarea
                 id="input"
                 name="input"
                 x-model="input"
                 required
-                rows={8}
-                class="mm-textarea font-mono text-[13px] min-h-[12rem]"
-                placeholder={t('urlPlaceholder')}
+                rows={6}
+                class="mm-textarea font-mono text-[13px] min-h-[9rem]"
+                placeholder="粘贴节点链接 / 订阅 URL（每行一条）…"
               ></textarea>
 
-              {/* 从节点库选择（妙妙屋：生成页先选节点） */}
+              {/* 输入下方：节点列表 */}
               <div
                 class="space-y-3 border-2 border-[var(--border)] p-3"
                 x-data="nodePickerData()"
@@ -175,8 +198,8 @@ export const Form = (props) => {
               >
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <div>
-                    <div class="mm-label mb-0">选择节点库节点</div>
-                    <p class="text-muted text-xs">登录后从 KV 节点库勾选，一键填入输入框（对标妙妙屋生成器）</p>
+                    <div class="mm-label mb-0">节点列表</div>
+                    <p class="text-muted text-xs">登录后显示 KV 节点库；勾选后填入输入框再点顶栏「转换订阅」</p>
                   </div>
                   <div class="flex flex-wrap gap-1.5">
                     <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-on:click="load()" x-bind:disabled="loading">
@@ -192,7 +215,7 @@ export const Form = (props) => {
                   </div>
                 </div>
                 <template x-if="!$store.auth.authenticated && $store.auth.authRequired">
-                  <p class="text-sm text-amber-700 dark:text-amber-400">请先登录节点库（右上角）</p>
+                  <p class="text-sm text-amber-700 dark:text-amber-400">请先登录（右上角）后查看节点列表</p>
                 </template>
                 <template x-if="$store.auth.authenticated">
                   <div class="space-y-2">
@@ -204,15 +227,16 @@ export const Form = (props) => {
                       <span x-text="(nodes?.length || 0) + ' 个 · 选中 ' + selectedCount"></span>
                       <span x-show="error" class="text-red-500" x-text="error"></span>
                     </div>
-                    <div class="max-h-48 overflow-y-auto border-2 border-[var(--border)] divide-y divide-[var(--border)]">
+                    <div class="max-h-56 overflow-y-auto border-2 border-[var(--border)] divide-y divide-[var(--border)]">
                       <template x-if="!nodes.length">
-                        <div class="px-3 py-6 text-center text-muted text-sm">节点库为空，请到「节点管理」保存节点</div>
+                        <div class="px-3 py-6 text-center text-muted text-sm">暂无节点。上方粘贴后点「保存节点」，或到节点管理页添加。</div>
                       </template>
                       <template x-for="n in nodes" x-bind:key="n.id">
-                        <label class="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-[color-mix(in_srgb,var(--muted)_40%,transparent)]" x-bind:class="n.enabled === false ? 'opacity-40' : ''">
+                        <label class="flex items-center gap-2 px-3 py-2.5 cursor-pointer hover:bg-[color-mix(in_srgb,var(--muted)_40%,transparent)]" x-bind:class="n.enabled === false ? 'opacity-40' : ''">
                           <input type="checkbox" class="mm-check" x-model="n.picked" x-bind:disabled="n.enabled === false" />
                           <span class="mm-chip text-[10px] uppercase" x-text="n.protocol || '?'"></span>
                           <span class="text-sm font-medium truncate flex-1" x-text="n.name"></span>
+                          <span class="font-mono text-[10px] text-muted truncate max-w-[8rem] hidden sm:inline" x-text="n.raw"></span>
                         </label>
                       </template>
                     </div>
@@ -220,7 +244,7 @@ export const Form = (props) => {
                 </template>
               </div>
 
-              {/* 规则模式：自定义 / 模板（对标妙妙屋） */}
+              {/* 规则模式 */}
               <div class="space-y-3">
                 <label class="mm-label">规则模式</label>
                 <div class="flex gap-2">
@@ -243,7 +267,7 @@ export const Form = (props) => {
                 </div>
               </div>
 
-              {/* 模板模式：卡片网格直接展示全部模板 */}
+{/* 模板模式：卡片网格直接展示全部模板 */}
               <div class="space-y-4" x-show="ruleMode === 'template'" x-cloak>
                 <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
                   <div class="space-y-1">
@@ -368,6 +392,7 @@ export const Form = (props) => {
                 </div>
               </div>
 
+              
               {/* 通用开关一行 */}
               <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <label class="flex items-center justify-between gap-2 border-2 border-[var(--border)] px-3 py-2.5 cursor-pointer">
@@ -401,37 +426,6 @@ export const Form = (props) => {
                   <label class="mm-label">{t('externalUiDownloadUrl')}</label>
                   <input type="text" x-model="externalUiDownloadUrl" class="mm-input" placeholder={t('externalUiDownloadUrlPlaceholder')} />
                 </div>
-              </div>
-
-              <div class="flex flex-col sm:flex-row gap-2 pt-1">
-                <button type="button" class="mm-btn mm-btn-primary flex-1" x-on:click="parseNodes()" x-bind:disabled="!input || !String(input).trim()">
-                  <i class="fas fa-magnifying-glass"></i>
-                  解析节点
-                </button>
-                <button
-                  type="button"
-                  class="mm-btn mm-btn-outline flex-1"
-                  x-on:click="saveNodes()"
-                  x-bind:disabled="!input || !String(input).trim()"
-                >
-                  <i class="fas fa-floppy-disk"></i>
-                  保存节点
-                </button>
-                <button type="submit" class="mm-btn mm-btn-secondary flex-1" x-bind:disabled="loading || !input || !String(input).trim()">
-                  <i class="fas" x-bind:class="loading ? 'fa-spinner fa-spin' : 'fa-file-export'"></i>
-                  <span x-text="loading ? processingText : '生成订阅'">{t('convert')}</span>
-                </button>
-                <button type="button" class="mm-btn mm-btn-outline" x-on:click="clearAll()">
-                  清空
-                </button>
-              </div>
-              <p class="text-sm text-[var(--primary)]" x-show="parseMessage" x-text="parseMessage"></p>
-              <div
-                class="border-2 border-[var(--border)] bg-[color-mix(in_srgb,var(--muted)_35%,transparent)] px-3 py-2.5 text-sm space-y-1"
-                x-show="parsePreview"
-              >
-                <div class="font-medium">解析预览</div>
-                <div class="text-muted font-mono text-xs" x-text="parsePreview ? ('行数 ' + parsePreview.lines + ' · 节点 ' + parsePreview.linkCount + ' · 订阅 ' + parsePreview.subCount) : ''"></div>
               </div>
             </div>
           </div>
