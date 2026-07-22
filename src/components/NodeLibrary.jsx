@@ -498,7 +498,7 @@ export const NodeLibrary = (props) => {
         <div class="card-header border-b border-[var(--border)] pb-4">
           <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <div>
-              <div class="card-title text-base">节点库</div>
+              <div class="card-title text-base">导入节点</div>
               <p class="card-desc">
                 KV 同步 · 跨设备
                 <span class="ml-2 font-mono text-[11px] text-[var(--primary)]" x-text="nodes.length + ' 节点 · 选中 ' + selectedCount"></span>
@@ -526,7 +526,7 @@ export const NodeLibrary = (props) => {
 
         <div class="grid grid-cols-1 lg:grid-cols-5 gap-3 mb-3">
           <div class="lg:col-span-3">
-            <label class="mm-label">粘贴节点 / 订阅行</label>
+            <label class="mm-label">手动导入 · 粘贴节点 / 订阅 URL</label>
             <textarea
               x-model="pasteBox"
               rows={3}
@@ -540,7 +540,7 @@ export const NodeLibrary = (props) => {
             <div class="flex flex-wrap gap-2 mt-auto">
               <button type="button" class="mm-btn mm-btn-primary flex-1 text-sm" x-on:click="importFromPaste()">
                 <i class="fas fa-plus text-xs"></i>
-                添加
+                保存到节点库
               </button>
               <button type="button" class="mm-btn mm-btn-ghost text-sm" x-on:click="applyToConverter({ convert: false })" x-bind:disabled="selectedCount === 0">
                 填入输入框

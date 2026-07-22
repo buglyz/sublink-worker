@@ -178,7 +178,7 @@ export const Form = (props) => {
 
   return (
     <div id="workspace" x-data="formData()" x-init="init()" class="space-y-6">
-      <section x-show="$store.ui.page === 'generate'" class="mx-auto space-y-6">
+      <section x-show={'$store.ui.page === "generate"'} class="mx-auto space-y-6">
         <div class="space-y-2">
           <h1 class="text-3xl font-bold tracking-tight">订阅链接生成器</h1>
           <p class="text-muted">从节点管理中选择节点，快速生成 Clash 订阅配置</p>
@@ -194,18 +194,18 @@ export const Form = (props) => {
             <div class="card-content space-y-5 pt-4">
               <div x-data="nodePickerData()" x-init="init()" class="space-y-4">
                 <div class="flex flex-wrap gap-2" x-show="$store.auth.authenticated">
-                  <button type="button" class="mm-btn mm-btn-sm" x-on:click="selectAllFiltered()" x-bind:class="allSelected ? 'mm-btn-primary' : 'mm-btn-outline'">
+                  <button type="button" class="mm-btn mm-btn-sm" x-on:click="selectAllFiltered()" x-bind:class={'allSelected ? "mm-btn-primary" : "mm-btn-outline"'}>
                     全部 (<span x-text="enabledNodes.length">0</span>)
                   </button>
                   <template x-for="p in protocols" x-bind:key="p.id">
-                    <button type="button" class="mm-btn mm-btn-sm uppercase" x-on:click="toggleProtocol(p.id)" x-bind:class="selectedProtocols[p.id] ? 'mm-btn-primary' : 'mm-btn-outline'">
+                    <button type="button" class="mm-btn mm-btn-sm uppercase" x-on:click="toggleProtocol(p.id)" x-bind:class={'selectedProtocols[p.id] ? "mm-btn-primary" : "mm-btn-outline"'}>
                       <span x-text="p.id"></span> (<span x-text="p.count"></span>)
                     </button>
                   </template>
                   <div class="flex-1 min-w-[0.5rem]"></div>
                   <input type="search" class="mm-input max-w-[12rem] h-9 text-sm" placeholder="搜索节点…" x-model="filter" />
                   <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-on:click="load()" x-bind:disabled="loading">
-                    <i class="fas" x-bind:class="loading ? 'fa-spinner fa-spin' : 'fa-rotate'"></i>
+                    <i class="fas" x-bind:class={'loading ? "fa-spinner fa-spin" : "fa-rotate"'}></i>
                   </button>
                 </div>
 
@@ -235,7 +235,7 @@ export const Form = (props) => {
                           <template x-for="n in filtered" x-bind:key="n.id">
                             <label
                               class="grid grid-cols-[40px_1fr] sm:grid-cols-[40px_1fr_100px_minmax(0,1.2fr)] gap-2 px-3 py-2.5 border-b border-[var(--border)] cursor-pointer hover:bg-[color-mix(in_srgb,var(--accent)_25%,transparent)] items-center"
-                              x-bind:class="n.picked ? 'bg-[color-mix(in_srgb,var(--accent)_40%,transparent)]' : ''"
+                              x-bind:class={'n.picked ? "bg-[color-mix(in_srgb,var(--accent)_40%,transparent)]" : ""'}
                             >
                               <span class="flex items-center justify-center">
                                 <input type="checkbox" class="mm-check" x-model="n.picked" />
@@ -255,12 +255,12 @@ export const Form = (props) => {
               <div class="space-y-3 pt-2 border-t-2 border-[var(--border)]">
                 <label class="mm-label">规则模式</label>
                 <div class="flex gap-2">
-                  <button type="button" class="mm-btn flex-1" x-on:click="setRuleMode('custom')" x-bind:class="ruleMode === 'custom' ? 'mm-btn-primary' : 'mm-btn-outline'">自定义规则</button>
-                  <button type="button" class="mm-btn flex-1" x-on:click="setRuleMode('template')" x-bind:class="ruleMode === 'template' ? 'mm-btn-primary' : 'mm-btn-outline'">使用模板</button>
+                  <button type="button" class="mm-btn flex-1" x-on:click="setRuleMode('custom')" x-bind:class={'ruleMode === "custom" ? "mm-btn-primary" : "mm-btn-outline"'}>自定义规则</button>
+                  <button type="button" class="mm-btn flex-1" x-on:click="setRuleMode('template')" x-bind:class={'ruleMode === "template" ? "mm-btn-primary" : "mm-btn-outline"'}>使用模板</button>
                 </div>
               </div>
 
-              <div class="space-y-3" x-show="ruleMode === 'custom'" x-cloak>
+              <div class="space-y-3" x-show={'ruleMode === "custom"'} x-cloak>
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <label class="mm-label mb-0">{t('ruleSelection')}</label>
                   <select x-model="selectedPredefinedRule" x-on:change="applyPredefinedRule()" class="mm-select w-full sm:w-auto min-w-[10rem]">
@@ -280,7 +280,7 @@ export const Form = (props) => {
                 </div>
               </div>
 
-              <div class="space-y-4" x-show="ruleMode === 'template'" x-cloak>
+              <div class="space-y-4" x-show={'ruleMode === "template"'} x-cloak>
                 <div class="space-y-1">
                   <label class="mm-label mb-0">{t('clashTemplate')}</label>
                   <p class="text-muted text-sm">{t('clashTemplateHint')}</p>
@@ -351,7 +351,7 @@ export const Form = (props) => {
                   "
                   x-bind:disabled="loading"
                 >
-                  <i class="fas" x-bind:class="loading ? 'fa-spinner fa-spin' : 'fa-file-export'"></i>
+                  <i class="fas" x-bind:class={'loading ? "fa-spinner fa-spin" : "fa-file-export"'}></i>
                   <span x-text="loading ? processingText : '生成订阅文件'"></span>
                 </button>
                 <button type="button" class="mm-btn mm-btn-outline" x-on:click="clearAll()">清空</button>
@@ -377,7 +377,7 @@ export const Form = (props) => {
                 <div class="card-title text-base">进阶配置</div>
                 <div class="card-desc">Subconverter · Base Config · User-Agent</div>
               </div>
-              <i class="fas fa-chevron-down text-xs mt-1 transition-transform" x-bind:class="accordionSections.advanced ? 'rotate-180 text-[var(--primary)]' : ''"></i>
+              <i class="fas fa-chevron-down text-xs mt-1 transition-transform" x-bind:class={'accordionSections.advanced ? "rotate-180 text-[var(--primary)]" : ""'}></i>
             </button>
             <div x-show="accordionSections.advanced" class="card-content border-t border-[var(--border)] pt-4 space-y-6">
               <div class="space-y-2">
@@ -387,7 +387,7 @@ export const Form = (props) => {
                 </div>
                 <div class="flex justify-end">
                   <button type="button" x-on:click="copySubconverterUrl()" class="mm-btn mm-btn-outline mm-btn-sm">
-                    <i class="fas" x-bind:class="subconverterCopied ? 'fa-check' : 'fa-copy'"></i>
+                    <i class="fas" x-bind:class={'subconverterCopied ? "fa-check" : "fa-copy"'}></i>
                     <span x-text={`subconverterCopied ? '${t('copiedSubconverterUrl')}' : '${t('copySubconverterUrl')}'`}></span>
                   </button>
                 </div>
@@ -415,7 +415,7 @@ export const Form = (props) => {
               <div class="card-desc">预览多客户端订阅地址</div>
             </div>
             <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-on:click="shortenAllLinks()" x-bind:disabled="isShortening || !generatedLinks">
-              <i class="fas" x-bind:class="isShortening ? 'fa-spinner fa-spin' : 'fa-link'"></i>
+              <i class="fas" x-bind:class={'isShortening ? "fa-spinner fa-spin" : "fa-link"'}></i>
               <span x-text="isShortening ? shorteningText : (shortenedLinks ? alreadyShortenedText : shortenLinksText)">{t('shortenLinks')}</span>
             </button>
           </div>
@@ -439,7 +439,7 @@ export const Form = (props) => {
         </div>
       </section>
 
-      <section x-show="$store.ui.page === 'nodes'" class="space-y-4">
+      <section x-show={'$store.ui.page === "nodes"'} class="space-y-4">
         <div>
           <h1 class="text-3xl font-semibold tracking-tight">节点管理</h1>
           <p class="text-muted mt-2">导入与管理节点；保存后在生成订阅页勾选使用</p>
@@ -447,7 +447,7 @@ export const Form = (props) => {
         <NodeLibrary t={t} />
       </section>
 
-      <section x-show="$store.ui.page === 'subscribe'" class="space-y-4">
+      <section x-show={'$store.ui.page === "subscribe"'} class="space-y-4">
         <div>
           <h1 class="text-3xl font-semibold tracking-tight">订阅链接</h1>
           <p class="text-muted mt-2">最近一次生成的多客户端订阅地址</p>

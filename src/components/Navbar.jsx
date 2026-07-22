@@ -31,7 +31,7 @@ export const Navbar = () => {
                 class="pixel-button inline-flex items-center gap-2 py-2 h-9 px-3 text-sm font-semibold uppercase tracking-widest bg-[color-mix(in_srgb,var(--background)_75%,transparent)] text-foreground border-2 border-[color:rgba(137,110,96,0.45)] hover:bg-[color-mix(in_srgb,var(--accent)_35%,transparent)] transition-all whitespace-nowrap"
                 data-page={item.id}
                 x-on:click="setPage($el.dataset.page)"
-                x-bind:class={`page === '${item.id}' ? 'bg-[color-mix(in_srgb,var(--primary)_20%,transparent)] text-[var(--primary)] border-[color:rgba(217,119,87,0.55)]' : ''`}
+                x-bind:class={`page === "${item.id}" ? "bg-[color-mix(in_srgb,var(--primary)_20%,transparent)] text-[var(--primary)] border-[color:rgba(217,119,87,0.55)]" : ""`}
               >
                 <i class={`fas ${item.icon} text-[15px] shrink-0`}></i>
                 <span>{item.label}</span>
@@ -46,7 +46,7 @@ export const Navbar = () => {
                 class="pixel-button inline-flex items-center justify-center h-9 w-9 border-2 border-[color:rgba(137,110,96,0.45)] bg-[color-mix(in_srgb,var(--background)_75%,transparent)]"
                 data-page={item.id}
                 x-on:click="setPage($el.dataset.page)"
-                x-bind:class={`page === '${item.id}' ? 'bg-[color-mix(in_srgb,var(--primary)_20%,transparent)] text-[var(--primary)] border-[color:rgba(217,119,87,0.55)]' : ''`}
+                x-bind:class={`page === "${item.id}" ? "bg-[color-mix(in_srgb,var(--primary)_20%,transparent)] text-[var(--primary)] border-[color:rgba(217,119,87,0.55)]" : ""`}
                 title={item.label}
                 aria-label={item.label}
               >
