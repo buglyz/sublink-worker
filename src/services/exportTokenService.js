@@ -4,9 +4,8 @@ const EXPORT_TOKEN_KEY = 'export:token:main';
 const SHORT_PREFIX = 'export:short:';
 
 /**
- * Subscription export token (long-lived, independent of login sessions).
- * Preferred client URL form: /sub/<shortId>
- * Also accepts /api/nodes/subscription?token=<token|shortId>
+ * Subscription export token + generation preferences for /sub/<id>.
+ * Preferred client URL: /sub/<shortId>  (default Clash YAML)
  */
 export class ExportTokenService {
     constructor(kv) {
@@ -28,7 +27,7 @@ export class ExportTokenService {
             const data = JSON.parse(raw);
             return data && data.token ? data : null;
         } catch {
-            return raw ? { token: raw, shortId: null, createdAt: null, rotatedAt: null } : null;
+            return raw ? { token: raw, shortId: null, createdAt: null, rotatedAt: null, prefs: {} } : null;
         }
     }
 
@@ -55,7 +54,7 @@ export class ExportTokenService {
         return record;
     }
 
-    async rotate() {
+    async rotate(prefs) {
         const kv = this.ensureKv();
         const prev = await this.get();
         if (prev?.shortId) {
@@ -67,11 +66,36 @@ export class ExportTokenService {
             token,
             shortId,
             createdAt: prev?.createdAt || Date.now(),
-            rotatedAt: Date.now()
+            rotatedAt: Date.now(),
+            prefs: prefs && typeof prefs === 'object' ? prefs : (prev?.prefs || {})
         };
         await kv.put(EXPORT_TOKEN_KEY, JSON.stringify(record));
         await kv.put(SHORT_PREFIX + shortId, token);
         return record;
+    }
+
+    /**
+     * Persist generation prefs used by /sub Clash export.
+     * Does not rotate token/shortId.
+     */
+    async setPrefs(prefs = {}) {
+        const kv = this.ensureKv();
+        const record = await this.getOrCreate();
+        const next = {
+            ...record,
+            prefs: normalizePrefs({ ...(record.prefs || {}), ...prefs }),
+            prefsUpdatedAt: Date.now()
+        };
+        await kv.put(EXPORT_TOKEN_KEY, JSON.stringify(next));
+        if (next.shortId) {
+            await kv.put(SHORT_PREFIX + next.shortId, next.token);
+        }
+        return next;
+    }
+
+    async getPrefs() {
+        const record = await this.get();
+        return normalizePrefs(record?.prefs || {});
     }
 
     async resolve(id) {
@@ -80,7 +104,6 @@ export class ExportTokenService {
         if (!record?.token) return null;
         if (id === record.token) return record;
         if (record.shortId && id === record.shortId) return record;
-        // reverse lookup short map (handles legacy)
         const kv = this.ensureKv();
         const mapped = await kv.get(SHORT_PREFIX + id);
         if (mapped && mapped === record.token) return record;
@@ -100,6 +123,26 @@ export class ExportTokenService {
     }
 }
 
+function normalizePrefs(prefs) {
+    const p = prefs && typeof prefs === 'object' ? prefs : {};
+    const out = {};
+    if (p.template) out.template = String(p.template).slice(0, 120);
+    if (p.selectedRules != null) {
+        // string preset name or JSON array string / array
+        if (Array.isArray(p.selectedRules)) {
+            out.selectedRules = p.selectedRules.map(String).slice(0, 100);
+        } else {
+            out.selectedRules = p.selectedRules;
+        }
+    }
+    if (Array.isArray(p.customRules)) out.customRules = p.customRules.slice(0, 100);
+    if (typeof p.groupByCountry === 'boolean') out.groupByCountry = p.groupByCountry;
+    if (typeof p.includeAutoSelect === 'boolean') out.includeAutoSelect = p.includeAutoSelect;
+    if (p.ua) out.ua = String(p.ua).slice(0, 200);
+    if (p.mode === 'template' || p.mode === 'custom') out.mode = p.mode;
+    return out;
+}
+
 function generateToken() {
     const bytes = new Uint8Array(24);
     if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
@@ -111,7 +154,6 @@ function generateToken() {
 }
 
 function generateShortId() {
-    // URL-safe short id (~10 chars)
     const bytes = new Uint8Array(8);
     if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
         crypto.getRandomValues(bytes);

@@ -527,6 +527,34 @@ export const formLogicFn = (t) => {
                         surge: origin + '/surge?' + queryString
                     };
 
+                    // Persist template/rules so default /sub Clash export matches UI selection
+                    try {
+                        const token = localStorage.getItem('sublink_auth_token') || '';
+                        if (token) {
+                            const prefs = {
+                                mode: this.ruleMode === 'template' && this.selectedTemplate ? 'template' : 'custom',
+                                template: this.ruleMode === 'template' ? (this.selectedTemplate || '') : '',
+                                selectedRules: this.selectedPredefinedRule && this.selectedPredefinedRule !== 'custom'
+                                    ? this.selectedPredefinedRule
+                                    : this.selectedRules,
+                                customRules,
+                                groupByCountry: !!this.groupByCountry,
+                                includeAutoSelect: this.includeAutoSelect !== false,
+                                ua: this.customUA || ''
+                            };
+                            await fetch('/api/export-prefs', {
+                                method: 'PUT',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    Authorization: 'Bearer ' + token
+                                },
+                                body: JSON.stringify({ prefs })
+                            });
+                        }
+                    } catch (e) {
+                        console.warn('save export prefs failed', e);
+                    }
+
                     // Ensure export token ready, then go to subscribe page
                     try {
                         if (window.Alpine && Alpine.store('auth') && typeof Alpine.store('auth').ensureExportToken === 'function') {

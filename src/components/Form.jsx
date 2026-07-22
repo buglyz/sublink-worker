@@ -457,7 +457,7 @@ export const Form = (props) => {
           <div class="pixel-card mm-card" x-show="$store.auth.exportSubUrl">
             <div class="card-header border-b border-[var(--border)] pb-4">
               <div class="card-title text-base">Clash 订阅链接</div>
-              <div class="card-desc">默认导出完整 Clash YAML（Mihomo / Clash Meta 可直接导入）</div>
+              <div class="card-desc">默认 Clash YAML；生成时选择的模板/规则会保存并应用于此链接</div>
             </div>
             <div class="card-content pt-4 space-y-2">
               <input

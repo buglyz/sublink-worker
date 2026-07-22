@@ -143,6 +143,7 @@ export function createApp(bindings = {}) {
             return c.json({
                 token: record.token,
                 shortId: record.shortId,
+                prefs: record.prefs || {},
                 createdAt: record.createdAt,
                 rotatedAt: record.rotatedAt,
                 subscriptionUrl: `${origin}${path}`,
@@ -158,17 +159,51 @@ export function createApp(bindings = {}) {
             if (!services.exportToken) {
                 throw new MissingDependencyError('Export token requires KV');
             }
-            const record = await services.exportToken.rotate();
+            const body = await c.req.json().catch(() => ({}));
+            const record = await services.exportToken.rotate(body.prefs || undefined);
             const origin = new URL(c.req.url).origin;
             const path = services.exportToken.subscriptionPath(record);
             return c.json({
                 token: record.token,
                 shortId: record.shortId,
+                prefs: record.prefs || {},
                 createdAt: record.createdAt,
                 rotatedAt: record.rotatedAt,
                 subscriptionUrl: `${origin}${path}`,
                 legacyUrl: `${origin}/api/nodes/subscription?token=${encodeURIComponent(record.shortId || record.token)}`
             });
+        } catch (error) {
+            return handleError(c, error, runtime.logger);
+        }
+    });
+
+    // Save generation prefs (template / rules) for default /sub Clash export
+    app.put('/api/export-prefs', requireAuth, async (c) => {
+        try {
+            if (!services.exportToken) {
+                throw new MissingDependencyError('Export prefs require KV');
+            }
+            const body = await c.req.json().catch(() => ({}));
+            const record = await services.exportToken.setPrefs(body.prefs || body || {});
+            const origin = new URL(c.req.url).origin;
+            const path = services.exportToken.subscriptionPath(record);
+            return c.json({
+                prefs: record.prefs || {},
+                subscriptionUrl: `${origin}${path}`,
+                shortId: record.shortId
+            });
+        } catch (error) {
+            return handleError(c, error, runtime.logger);
+        }
+    });
+
+    app.get('/api/export-prefs', requireAuth, async (c) => {
+        try {
+            if (!services.exportToken) {
+                throw new MissingDependencyError('Export prefs require KV');
+            }
+            const prefs = await services.exportToken.getPrefs();
+            return c.json({ prefs });
         } catch (error) {
             return handleError(c, error, runtime.logger);
         }
@@ -239,6 +274,7 @@ export function createApp(bindings = {}) {
 
         // format: clash (default) | base64 | raw/uri
         // Clash clients expect YAML config, not plain vless:// lines.
+        // Query params override stored prefs when present.
         const format = String(c.req.query('format') || c.req.query('target') || 'clash').toLowerCase();
         const joined = lines.join('\n');
 
@@ -258,13 +294,54 @@ export function createApp(bindings = {}) {
             });
         }
 
-        // Default: full Clash YAML so Mihomo/Clash Meta can import directly
+        // Default: full Clash YAML. Prefer template/rules from export prefs (set on generate).
+        let prefs = {};
+        try {
+            if (services.exportToken) prefs = await services.exportToken.getPrefs();
+        } catch {}
+
         const lang = resolveLanguage(c.get('lang') || c.req.query('lang'));
-        const ua = c.req.query('ua') || getRequestHeader(c.req, 'User-Agent') || DEFAULT_USER_AGENT;
-        const selectedRules = parseSelectedRules(c.req.query('selectedRules')) || 'balanced';
-        const customRules = parseJsonArray(c.req.query('customRules')) || [];
-        const groupByCountry = parseBooleanFlag(c.req.query('group_by_country'));
-        const includeAutoSelect = c.req.query('include_auto_select') !== 'false';
+        const ua = c.req.query('ua') || prefs.ua || getRequestHeader(c.req, 'User-Agent') || DEFAULT_USER_AGENT;
+        const templateId = c.req.query('template') || c.req.query('rule_template') || prefs.template || '';
+
+        if (templateId) {
+            const builder = new TemplateClashBuilder(joined, templateId, {
+                lang,
+                userAgent: ua
+            });
+            await builder.build();
+            const yamlText = builder.formatConfig();
+            return c.text(yamlText, 200, {
+                'Content-Type': 'text/yaml; charset=utf-8',
+                'Profile-Update-Interval': '12',
+                'Cache-Control': 'no-store',
+                'Content-Disposition': 'inline; filename="sublink.yaml"',
+                'X-Sublink-Template': String(templateId)
+            });
+        }
+
+        const selectedRules =
+            parseSelectedRules(c.req.query('selectedRules')) ||
+            parseSelectedRules(
+                typeof prefs.selectedRules === 'string'
+                    ? prefs.selectedRules
+                    : prefs.selectedRules
+                        ? JSON.stringify(prefs.selectedRules)
+                        : null
+            ) ||
+            'balanced';
+        const customRules =
+            parseJsonArray(c.req.query('customRules')) ||
+            (Array.isArray(prefs.customRules) ? prefs.customRules : []) ||
+            [];
+        const groupByCountry =
+            c.req.query('group_by_country') != null
+                ? parseBooleanFlag(c.req.query('group_by_country'))
+                : !!prefs.groupByCountry;
+        const includeAutoSelect =
+            c.req.query('include_auto_select') != null
+                ? c.req.query('include_auto_select') !== 'false'
+                : prefs.includeAutoSelect !== false;
 
         const builder = new ClashConfigBuilder(
             joined,
@@ -285,7 +362,8 @@ export function createApp(bindings = {}) {
             'Content-Type': 'text/yaml; charset=utf-8',
             'Profile-Update-Interval': '12',
             'Cache-Control': 'no-store',
-            'Content-Disposition': 'inline; filename="sublink.yaml"'
+            'Content-Disposition': 'inline; filename="sublink.yaml"',
+            'X-Sublink-Rules': typeof selectedRules === 'string' ? selectedRules : 'custom'
         });
     }
 
