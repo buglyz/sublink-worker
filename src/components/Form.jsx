@@ -103,59 +103,12 @@ export const Form = (props) => {
         </div>
 
         <form {...{ 'x-on:submit.prevent': 'submitForm' }} class="space-y-4">
-          {/* —— 主流程：输入（始终展开）—— */}
-          <div class="mm-card">
-            <div class="border-b border-[var(--border)] px-5 py-4">
-              <div class="flex items-start justify-between gap-3">
-                <div>
-                  <div class="flex items-center gap-2">
-                    <span class="mm-chip text-[10px]">1</span>
-                    <h2 class="text-lg font-semibold tracking-tight">{t('shareUrls')}</h2>
-                  </div>
-                  <p class="mm-desc mt-1">{t('urlPlaceholder')}</p>
-                </div>
-                <div class="flex gap-1.5 shrink-0">
-                  <button type="button" class="mm-btn mm-btn-ghost text-xs py-1.5" x-on:click="navigator.clipboard.readText().then(text => input = text).catch(() => {})">
-                    <i class="fas fa-paste"></i>{t('paste')}
-                  </button>
-                  <button type="button" class="mm-btn mm-btn-ghost text-xs py-1.5" x-show="input" x-on:click="input = ''">
-                    <i class="fas fa-times"></i>{t('clear')}
-                  </button>
-                </div>
-              </div>
-            </div>
-            <div class="p-5 space-y-4">
-              <textarea
-                id="input"
-                name="input"
-                x-model="input"
-                required
-                rows={7}
-                class="mm-textarea font-mono text-[13px] min-h-[10rem]"
-                placeholder={t('urlPlaceholder')}
-              ></textarea>
-              <div class="flex flex-col sm:flex-row gap-2.5">
-                <button type="submit" class="mm-btn mm-btn-primary flex-1 py-2.5" x-bind:disabled="loading">
-                  <i class="fas" x-bind:class="loading ? 'fa-spinner fa-spin' : 'fa-bolt'"></i>
-                  <span x-text="loading ? processingText : convertText">{t('convert')}</span>
-                </button>
-                <button
-                  type="button"
-                  class="mm-btn mm-btn-secondary py-2.5"
-                  x-on:click="window.dispatchEvent(new CustomEvent('nodes-import-from-input')); window.__SUBLINK_UI__.setPage('nodes')"
-                >
-                  <i class="fas fa-bookmark text-xs"></i>
-                  存入节点库
-                </button>
-                <button type="button" class="mm-btn mm-btn-ghost py-2.5" x-on:click="clearAll()">
-                  <i class="fas fa-trash-alt text-xs"></i>
-                  {t('clear')}
-                </button>
-              </div>
-            </div>
+          <div class="space-y-1">
+            <p class="text-xs font-medium uppercase tracking-wide text-[var(--muted-foreground)]">配置</p>
+            <p class="mm-desc">先选模板与规则，再在下方粘贴源并生成（布局对标妙妙屋：设置在上）。</p>
           </div>
 
-          {/* 栏目导航条 */}
+{/* 栏目导航条（设置在上） */}
           <div class="flex flex-wrap gap-2 px-0.5">
             <button type="button" class="mm-chip cursor-pointer hover:border-[var(--primary)]" x-on:click="accordionSections.template = true">
               <i class="fas fa-layer-group text-[10px]"></i> 模板
@@ -188,12 +141,13 @@ export const Form = (props) => {
             </button>
           </div>
 
-          {/* —— 模板 —— */}
+          
+{/* —— 模板 —— */}
           <div class="mm-card overflow-hidden">
             <button type="button" class="w-full px-5 py-4 flex items-start justify-between gap-3 text-left hover:bg-[color-mix(in_srgb,var(--muted)_35%,transparent)]" x-on:click="toggleAccordion('template')">
               <div class="min-w-0">
                 <div class="flex flex-wrap items-center gap-2">
-                  <span class="mm-chip text-[10px]">2</span>
+                  <span class="mm-chip text-[10px]">1</span>
                   <h2 class="text-base sm:text-lg font-semibold tracking-tight">{t('clashTemplate')}</h2>
                   <span class="mm-chip text-[10px]" x-show="selectedTemplate" x-text="templateLabel()"></span>
                 </div>
@@ -226,12 +180,13 @@ export const Form = (props) => {
             </div>
           </div>
 
-          {/* —— 规则 —— */}
+          
+{/* —— 规则 —— */}
           <div class="mm-card overflow-hidden" x-bind:class="selectedTemplate ? 'opacity-70' : ''">
             <button type="button" class="w-full px-5 py-4 flex items-start justify-between gap-3 text-left hover:bg-[color-mix(in_srgb,var(--muted)_35%,transparent)]" x-on:click="toggleAccordion('rules')">
               <div class="min-w-0">
                 <div class="flex flex-wrap items-center gap-2">
-                  <span class="mm-chip text-[10px]">3</span>
+                  <span class="mm-chip text-[10px]">2</span>
                   <h2 class="text-base sm:text-lg font-semibold tracking-tight">{t('ruleSelection')}</h2>
                   <span class="mm-chip text-[10px]" x-text="selectedPredefinedRule"></span>
                   <span class="mm-chip text-[10px]" x-text="(selectedRules||[]).length + ' 项'"></span>
@@ -275,12 +230,13 @@ export const Form = (props) => {
             </div>
           </div>
 
-          {/* —— 自定义规则 —— */}
+          
+{/* —— 自定义规则 —— */}
           <div class="mm-card overflow-hidden">
             <button type="button" class="w-full px-5 py-4 flex items-start justify-between gap-3 text-left hover:bg-[color-mix(in_srgb,var(--muted)_35%,transparent)]" x-on:click="toggleAccordion('customRules')">
               <div class="min-w-0">
                 <div class="flex flex-wrap items-center gap-2">
-                  <span class="mm-chip text-[10px]">4</span>
+                  <span class="mm-chip text-[10px]">3</span>
                   <h2 class="text-base sm:text-lg font-semibold tracking-tight">{t('customRulesSection')}</h2>
                 </div>
                 <p class="mm-desc mt-1">{t('customRulesSectionTooltip')}</p>
@@ -294,12 +250,13 @@ export const Form = (props) => {
             </div>
           </div>
 
-          {/* —— 通用设置 —— */}
+          
+{/* —— 通用设置 —— */}
           <div class="mm-card overflow-hidden">
             <button type="button" class="w-full px-5 py-4 flex items-start justify-between gap-3 text-left hover:bg-[color-mix(in_srgb,var(--muted)_35%,transparent)]" x-on:click="toggleAccordion('general')">
               <div class="min-w-0">
                 <div class="flex flex-wrap items-center gap-2">
-                  <span class="mm-chip text-[10px]">5</span>
+                  <span class="mm-chip text-[10px]">4</span>
                   <h2 class="text-base sm:text-lg font-semibold tracking-tight">{t('generalSettings')}</h2>
                 </div>
                 <p class="mm-desc mt-1">国家分组 · 自动选择 · Clash UI</p>
@@ -343,12 +300,13 @@ export const Form = (props) => {
             </div>
           </div>
 
-          {/* —— 进阶（Subconverter + Base + UA 收纳）—— */}
+          
+{/* —— 进阶（Subconverter + Base + UA 收纳）—— */}
           <div class="mm-card overflow-hidden">
             <button type="button" class="w-full px-5 py-4 flex items-start justify-between gap-3 text-left hover:bg-[color-mix(in_srgb,var(--muted)_35%,transparent)]" x-on:click="toggleAccordion('advanced')">
               <div class="min-w-0">
                 <div class="flex flex-wrap items-center gap-2">
-                  <span class="mm-chip text-[10px]">6</span>
+                  <span class="mm-chip text-[10px]">5</span>
                   <h2 class="text-base sm:text-lg font-semibold tracking-tight">进阶配置</h2>
                   <span class="mm-chip text-[10px]">Subconverter · Base Config · UA</span>
                 </div>
@@ -425,6 +383,64 @@ export const Form = (props) => {
               </div>
             </div>
           </div>
+        
+          <div class="pt-2 space-y-1">
+            <p class="text-xs font-medium uppercase tracking-wide text-[var(--muted-foreground)]">生成</p>
+          </div>
+
+{/* —— 主流程：输入 + 转换（置底，始终展开）—— */}
+          <div class="mm-card">
+            <div class="border-b border-[var(--border)] px-5 py-4">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="mm-chip text-[10px] bg-[color-mix(in_srgb,var(--primary)_14%,transparent)] text-[var(--primary)] border-[color-mix(in_srgb,var(--primary)_30%,var(--border))]">主操作</span>
+                    <h2 class="text-lg font-semibold tracking-tight">{t('shareUrls')}</h2>
+                  </div>
+                  <p class="mm-desc mt-1">{t('urlPlaceholder')}</p>
+                </div>
+                <div class="flex gap-1.5 shrink-0">
+                  <button type="button" class="mm-btn mm-btn-ghost text-xs py-1.5" x-on:click="navigator.clipboard.readText().then(text => input = text).catch(() => {})">
+                    <i class="fas fa-paste"></i>{t('paste')}
+                  </button>
+                  <button type="button" class="mm-btn mm-btn-ghost text-xs py-1.5" x-show="input" x-on:click="input = ''">
+                    <i class="fas fa-times"></i>{t('clear')}
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="p-5 space-y-4">
+              <textarea
+                id="input"
+                name="input"
+                x-model="input"
+                required
+                rows={7}
+                class="mm-textarea font-mono text-[13px] min-h-[10rem]"
+                placeholder={t('urlPlaceholder')}
+              ></textarea>
+              <div class="flex flex-col sm:flex-row gap-2.5">
+                <button type="submit" class="mm-btn mm-btn-primary flex-1 py-2.5" x-bind:disabled="loading">
+                  <i class="fas" x-bind:class="loading ? 'fa-spinner fa-spin' : 'fa-bolt'"></i>
+                  <span x-text="loading ? processingText : convertText">{t('convert')}</span>
+                </button>
+                <button
+                  type="button"
+                  class="mm-btn mm-btn-secondary py-2.5"
+                  x-on:click="window.dispatchEvent(new CustomEvent('nodes-import-from-input')); window.__SUBLINK_UI__.setPage('nodes')"
+                >
+                  <i class="fas fa-bookmark text-xs"></i>
+                  存入节点库
+                </button>
+                <button type="button" class="mm-btn mm-btn-ghost py-2.5" x-on:click="clearAll()">
+                  <i class="fas fa-trash-alt text-xs"></i>
+                  {t('clear')}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          
         </form>
       </section>
 
