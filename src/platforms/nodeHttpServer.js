@@ -15,8 +15,9 @@ export function startNodeHttpServer(app, { port = 8787, logger = console } = {})
         }
     });
 
-    server.listen(port, () => {
-        logger.info?.(`Sublink worker running on http://0.0.0.0:${port}`);
+    const host = process.env.HOST || '127.0.0.1';
+    server.listen(port, host, () => {
+        logger.info?.(`Sublink worker running on http://${host}:${port}`);
     });
 
     return server;
