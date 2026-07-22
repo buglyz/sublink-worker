@@ -501,19 +501,28 @@ export function createApp(bindings = {}) {
         }
     });
 
-    app.get('/favicon.ico', async (c) => {
-        if (!runtime.assetFetcher) {
-            return c.notFound();
-        }
-        try {
-            return await runtime.assetFetcher(c.req.raw);
-        } catch (error) {
-            runtime.logger.warn('Asset fetch failed', error);
-            return c.notFound();
-        }
-    });
+    app.get('/favicon.ico', async (c) => servePublicAsset(c, runtime));
+    app.get('/favicon.png', async (c) => servePublicAsset(c, runtime));
+    app.get('/logo.svg', async (c) => servePublicAsset(c, runtime));
+    app.get('/logo.png', async (c) => servePublicAsset(c, runtime));
+    app.get('/logo-128.png', async (c) => servePublicAsset(c, runtime));
+    app.get('/logo-64.png', async (c) => servePublicAsset(c, runtime));
+    app.get('/logo-32.png', async (c) => servePublicAsset(c, runtime));
+    app.get('/apple-touch-icon.png', async (c) => servePublicAsset(c, runtime));
 
     return app;
+}
+
+async function servePublicAsset(c, runtime) {
+    if (!runtime.assetFetcher) {
+        return c.notFound();
+    }
+    try {
+        return await runtime.assetFetcher(c.req.raw);
+    } catch (error) {
+        runtime.logger.warn('Asset fetch failed', error);
+        return c.notFound();
+    }
 }
 
 export function parseSelectedRules(raw) {

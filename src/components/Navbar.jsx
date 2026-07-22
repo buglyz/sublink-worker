@@ -15,9 +15,11 @@ export const Navbar = () => {
         <div class="flex min-w-0 items-center gap-3 sm:gap-6">
           <a href="/" class="flex shrink-0 items-center gap-3 font-semibold tracking-tight outline-none group">
             <img
-              src="/favicon.ico"
-              alt=""
-              class="h-10 w-10 border-2 border-[color:rgba(241,140,110,0.4)] shadow-[4px_4px_0_rgba(0,0,0,0.2)] bg-[var(--primary)] p-1.5 brightness-0 invert dark:invert-0"
+              src="/logo.svg"
+              alt="Sublink Worker"
+              class="h-10 w-10 border-2 border-[color:rgba(241,140,110,0.4)] shadow-[4px_4px_0_rgba(0,0,0,0.2)] bg-[var(--background)] object-cover"
+              width="40"
+              height="40"
             />
             <span class="hidden md:inline pixel-text text-primary text-sm whitespace-nowrap group-hover:opacity-90">
               {APP_NAME}
