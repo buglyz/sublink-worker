@@ -76,9 +76,54 @@ describe('security regressions', () => {
         for (let i = 0; i < 8; i += 1) {
             await expect(auth.login('wrong', { clientKey: '1.2.3.4' })).rejects.toThrow('Invalid password');
         }
-        await expect(auth.login('wrong', { clientKey: '1.2.3.4' })).rejects.toThrow(/过于频繁|频繁/);
+        try {
+            await auth.login('wrong', { clientKey: '1.2.3.4' });
+            throw new Error('expected rate limit');
+        } catch (error) {
+            expect(error.status).toBe(429);
+            expect(error.retryAfter).toBeGreaterThan(0);
+            expect(String(error.message)).toMatch(/过于频繁|频繁/);
+        }
         await expect(auth.login('wrong', { clientKey: '5.6.7.8' })).rejects.toThrow('Invalid password');
         await expect(auth.login('correct-horse', { clientKey: '1.2.3.4' })).rejects.toThrow(/过于频繁|频繁/);
+    });
+
+    it('adds short private cache headers on public subscription export', async () => {
+        const kv = new MemoryKVAdapter();
+        const password = 'owner-password';
+        const app = createTestApp(kv, password);
+        const login = await app.request('http://localhost/api/auth/login', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ password })
+        });
+        const { token } = await login.json();
+        const put = await app.request('http://localhost/api/nodes', {
+            method: 'PUT',
+            headers: {
+                authorization: `Bearer ${token}`,
+                'content-type': 'application/json'
+            },
+            body: JSON.stringify({
+                revision: 0,
+                nodes: [{ raw: testNode, name: 'a', protocol: 'ss', enabled: true }]
+            })
+        });
+        expect(put.status).toBe(200);
+        const create = await app.request('http://localhost/api/subscriptions', {
+            method: 'POST',
+            headers: {
+                authorization: `Bearer ${token}`,
+                'content-type': 'application/json'
+            },
+            body: JSON.stringify({ name: 'cache-sub', nodeIds: [] })
+        });
+        expect([200, 201]).toContain(create.status);
+        const { item } = await create.json();
+        const res = await app.request(`http://localhost/subscribe/${item.slug}`);
+        expect(res.status).toBe(200);
+        expect(res.headers.get('Cache-Control')).toMatch(/max-age=60/);
+        expect(res.headers.get('Profile-Update-Interval')).toBe('12');
     });
 
     it('rejects stale node writes through the storage coordinator', async () => {

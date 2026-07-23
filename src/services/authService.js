@@ -1,4 +1,4 @@
-import { ServiceError, UnauthorizedError } from './errors.js';
+import { ServiceError, UnauthorizedError, RateLimitError } from './errors.js';
 
 /** Best-effort per-isolate login throttle (Workers may have multiple isolates). */
 const loginAttempts = new Map();
@@ -142,7 +142,7 @@ function assertNotRateLimited(clientKey) {
     if (!entry) return;
     if (entry.blockedUntil && entry.blockedUntil > now) {
         const retryAfterSec = Math.ceil((entry.blockedUntil - now) / 1000);
-        throw new ServiceError(`登录尝试过于频繁，请 ${retryAfterSec} 秒后重试`, 429);
+        throw new RateLimitError(`登录尝试过于频繁，请 ${retryAfterSec} 秒后重试`, retryAfterSec);
     }
 }
 

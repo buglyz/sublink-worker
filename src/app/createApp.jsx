@@ -23,10 +23,16 @@ import { NodeImportService } from '../services/nodeImportService.js';
 import { SubscriptionStorageService } from '../services/subscriptionStorageService.js';
 import { resolveXraySubscriptionLines } from '../services/xraySubscriptionService.js';
 import { ServiceError, MissingDependencyError, UnauthorizedError, InvalidPayloadError } from '../services/errors.js';
+import { createRateLimiter } from '../services/rateLimiter.js';
 import { normalizeRuntime } from '../runtime/runtimeConfig.js';
 import { PREDEFINED_RULE_SETS, SING_BOX_CONFIG, SING_BOX_CONFIG_V1_11, generateSubconverterConfig } from '../config/index.js';
 
 const DEFAULT_USER_AGENT = 'curl/7.74.0';
+const PUBLIC_SUB_CACHE_HEADERS = {
+    'Profile-Update-Interval': '12',
+    // Short private cache: cuts client hammering without serving stale configs for long.
+    'Cache-Control': 'private, max-age=60'
+};
 
 export function createApp(bindings = {}) {
     const runtime = normalizeRuntime(bindings);
@@ -44,6 +50,11 @@ export function createApp(bindings = {}) {
         nodeImport: nodeStorage ? new NodeImportService(nodeStorage) : null,
         subscriptions: runtime.kv ? new SubscriptionStorageService(runtime.kv, storageCoordinator) : null
     };
+    const importLimiter = createRateLimiter({
+        name: '远程导入',
+        max: 20,
+        windowMs: 15 * 60 * 1000
+    });
 
     const app = new Hono();
 
@@ -224,6 +235,7 @@ export function createApp(bindings = {}) {
             if (!services.nodeImport) {
                 throw new MissingDependencyError('Node import requires KV');
             }
+            importLimiter.consume(getClientKey(c));
             const body = await c.req.json().catch(() => ({}));
             const result = await services.nodeImport.importFromUrl(body.url || body.subscription || '', {
                 tag: body.tag,
@@ -362,16 +374,14 @@ export function createApp(bindings = {}) {
         if (format === 'raw' || format === 'uri' || format === 'text') {
             return c.text(joined, 200, {
                 'Content-Type': 'text/plain; charset=utf-8',
-                'Profile-Update-Interval': '12',
-                'Cache-Control': 'no-store'
+                ...PUBLIC_SUB_CACHE_HEADERS
             });
         }
 
         if (format === 'base64' || format === 'b64' || format === 'v2ray') {
             return c.text(encodeBase64(joined), 200, {
                 'Content-Type': 'text/plain; charset=utf-8',
-                'Profile-Update-Interval': '12',
-                'Cache-Control': 'no-store'
+                ...PUBLIC_SUB_CACHE_HEADERS
             });
         }
 
@@ -396,8 +406,7 @@ export function createApp(bindings = {}) {
             const yamlText = builder.formatConfig();
             return c.text(yamlText, 200, {
                 'Content-Type': 'text/yaml; charset=utf-8',
-                'Profile-Update-Interval': '12',
-                'Cache-Control': 'no-store',
+                ...PUBLIC_SUB_CACHE_HEADERS,
                 'Content-Disposition': 'inline; filename="sublink.yaml"',
                 'X-Sublink-Template': String(templateId)
             });
@@ -439,13 +448,11 @@ export function createApp(bindings = {}) {
         const rulesLabel = typeof prefs.selectedRules === 'string'
             ? prefs.selectedRules
             : (c.req.query('selectedRules') || 'custom');
-        return c.text(yamlText, 200, {
+        return c.text(yamlText, 200, subscriptionExportHeaders({
             'Content-Type': 'text/yaml; charset=utf-8',
-            'Profile-Update-Interval': '12',
-            'Cache-Control': 'no-store',
             'Content-Disposition': 'inline; filename="sublink.yaml"',
             'X-Sublink-Rules': rulesLabel
-        });
+        }));
     }
 
     async function exportManagedSubscription(slug, c) {
@@ -478,15 +485,13 @@ export function createApp(bindings = {}) {
         if (format === 'raw' || format === 'uri' || format === 'text') {
             return c.text(joined, 200, {
                 'Content-Type': 'text/plain; charset=utf-8',
-                'Profile-Update-Interval': '12',
-                'Cache-Control': 'no-store'
+                ...PUBLIC_SUB_CACHE_HEADERS
             });
         }
         if (format === 'base64' || format === 'b64' || format === 'v2ray') {
             return c.text(encodeBase64(joined), 200, {
                 'Content-Type': 'text/plain; charset=utf-8',
-                'Profile-Update-Interval': '12',
-                'Cache-Control': 'no-store'
+                ...PUBLIC_SUB_CACHE_HEADERS
             });
         }
 
@@ -502,8 +507,7 @@ export function createApp(bindings = {}) {
             await builder.build();
             return c.text(builder.formatConfig(), 200, {
                 'Content-Type': 'text/yaml; charset=utf-8',
-                'Profile-Update-Interval': '12',
-                'Cache-Control': 'no-store',
+                ...PUBLIC_SUB_CACHE_HEADERS,
                 'Content-Disposition': `inline; filename="${item.slug || 'sub'}.yaml"`,
                 'X-Sublink-Template': String(templateId),
                 'X-Sublink-Subscription': item.id
@@ -534,8 +538,7 @@ export function createApp(bindings = {}) {
         await builder.build();
         return c.text(builder.formatConfig(), 200, {
             'Content-Type': 'text/yaml; charset=utf-8',
-            'Profile-Update-Interval': '12',
-            'Cache-Control': 'no-store',
+            ...PUBLIC_SUB_CACHE_HEADERS,
             'Content-Disposition': `inline; filename="${item.slug || 'sub'}.yaml"`,
             'X-Sublink-Subscription': item.id
         });
@@ -1146,6 +1149,13 @@ function extractBearerToken(c) {
     return '';
 }
 
+function subscriptionExportHeaders(extra = {}) {
+    return {
+        ...PUBLIC_SUB_CACHE_HEADERS,
+        ...extra
+    };
+}
+
 function getClientKey(c) {
     const cf = getRequestHeader(c.req, 'CF-Connecting-IP');
     if (cf) return String(cf).trim();
@@ -1163,10 +1173,17 @@ function getClientKey(c) {
 function handleError(c, error, logger) {
     if (error instanceof ServiceError) {
         const path = c.req.path || '';
-        if (path.startsWith('/api/')) {
-            return c.json({ error: error.message }, error.status);
+        const headers = {};
+        if (error.retryAfter) {
+            headers['Retry-After'] = String(error.retryAfter);
         }
-        return c.text(error.message, error.status);
+        if (error.headers) {
+            Object.assign(headers, error.headers);
+        }
+        if (path.startsWith('/api/')) {
+            return c.json({ error: error.message, retryAfter: error.retryAfter || undefined }, error.status, headers);
+        }
+        return c.text(error.message, error.status, headers);
     }
     logger.error?.('Unhandled error', error);
     const path = c.req.path || '';
