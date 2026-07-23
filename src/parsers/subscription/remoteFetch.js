@@ -74,9 +74,15 @@ function isPrivateIpv4(host) {
         values[0] === 10 ||
         values[0] === 127 ||
         values[0] >= 224 ||
+        (values[0] === 100 && values[1] >= 64 && values[1] <= 127) || // CGNAT
         (values[0] === 169 && values[1] === 254) ||
         (values[0] === 172 && values[1] >= 16 && values[1] <= 31) ||
-        (values[0] === 192 && values[1] === 168);
+        (values[0] === 192 && values[1] === 0 && values[2] === 0) || // 192.0.0.0/24 IETF
+        (values[0] === 192 && values[1] === 0 && values[2] === 2) || // TEST-NET-1
+        (values[0] === 192 && values[1] === 168) ||
+        (values[0] === 198 && (values[1] === 18 || values[1] === 19)) || // benchmarking
+        (values[0] === 198 && values[1] === 51 && values[2] === 100) || // TEST-NET-2
+        (values[0] === 203 && values[1] === 0 && values[2] === 113); // TEST-NET-3
 }
 
 async function fetchWithTimeout(url, { headers, timeoutMs }) {

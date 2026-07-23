@@ -303,10 +303,16 @@ export const NodeLibrary = (props) => {
 
         async syncNow(attempt = 0) {
           if (!this.authenticated || this.suppressSync) return;
+          if (this._syncInFlight) {
+            this._syncQueued = true;
+            return;
+          }
           const intended = Array.isArray(this.nodes) ? this.nodes : [];
           const payload = JSON.stringify(intended);
           if (payload === this.lastSyncedJson) return;
+          this._syncInFlight = true;
           this.saving = true;
+          let handoffRetry = false;
           try {
             const res = await fetch('/api/nodes', {
               method: 'PUT',
@@ -321,13 +327,15 @@ export const NodeLibrary = (props) => {
               return;
             }
             if (res.status === 409) {
-              // Align revision from server, then re-apply this tab's intended list (max 2 retries).
               await this.loadFromServer();
               if (attempt < 2) {
                 this.suppressSync = true;
                 this.nodes = JSON.parse(payload);
+                handoffRetry = true;
                 setTimeout(() => {
                   this.suppressSync = false;
+                  this._syncInFlight = false;
+                  this.saving = false;
                   this.syncNow(attempt + 1);
                 }, 0);
                 return;
@@ -349,7 +357,13 @@ export const NodeLibrary = (props) => {
           } catch (e) {
             this.flash = '同步失败: ' + (e.message || '');
           } finally {
+            if (handoffRetry) return;
+            this._syncInFlight = false;
             this.saving = false;
+            if (this._syncQueued) {
+              this._syncQueued = false;
+              setTimeout(() => this.syncNow(0), 0);
+            }
           }
         },
 

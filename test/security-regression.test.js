@@ -1,7 +1,7 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { createApp } from '../src/app/createApp.jsx';
 import { MemoryKVAdapter } from '../src/adapters/kv/memoryKv.js';
-import { AuthService } from '../src/services/authService.js';
+import { AuthService, _resetLoginRateLimitForTests } from '../src/services/authService.js';
 import { NodeStorageService } from '../src/services/nodeStorageService.js';
 import { NodeImportService } from '../src/services/nodeImportService.js';
 import { SubscriptionStorageService } from '../src/services/subscriptionStorageService.js';
@@ -21,6 +21,10 @@ function createTestApp(kv, authPassword = '', extra = {}) {
 }
 
 describe('security regressions', () => {
+    beforeEach(() => {
+        _resetLoginRateLimitForTests();
+    });
+
     it('does not resolve internal KV records as short links', async () => {
         const kv = new MemoryKVAdapter();
         await kv.put('export:token:main', JSON.stringify({ token: 'audit-secret-token' }));
@@ -64,6 +68,17 @@ describe('security regressions', () => {
 
         expect(await firstAuth.validateToken(token)).toBe(true);
         expect(await new AuthService(kv, { password: 'new-password' }).validateToken(token)).toBe(false);
+    });
+
+    it('rate-limits repeated failed logins from the same client', async () => {
+        const kv = new MemoryKVAdapter();
+        const auth = new AuthService(kv, { password: 'correct-horse' });
+        for (let i = 0; i < 8; i += 1) {
+            await expect(auth.login('wrong', { clientKey: '1.2.3.4' })).rejects.toThrow('Invalid password');
+        }
+        await expect(auth.login('wrong', { clientKey: '1.2.3.4' })).rejects.toThrow(/过于频繁|频繁/);
+        await expect(auth.login('wrong', { clientKey: '5.6.7.8' })).rejects.toThrow('Invalid password');
+        await expect(auth.login('correct-horse', { clientKey: '1.2.3.4' })).rejects.toThrow(/过于频繁|频繁/);
     });
 
     it('rejects stale node writes through the storage coordinator', async () => {
@@ -227,7 +242,6 @@ describe('security regressions', () => {
         await importer.importFromUrl('https://example.com/sub', { mode: 'merge', tag: 'new-tag' });
         vi.unstubAllGlobals();
 
-        // Original object held by coordinator must stay untouched.
         expect(shared.name).toBe('old');
         expect(shared.tag).toBe('old-tag');
         expect(shared.source).toBeUndefined();
@@ -252,6 +266,8 @@ describe('security regressions', () => {
         await expect(fetchRemoteText('http://127.0.0.1/private')).rejects.toThrow('不允许访问本地或私有网络地址');
         await expect(fetchRemoteText('http://[::1]/private')).rejects.toThrow('不允许访问本地或私有网络地址');
         await expect(fetchRemoteText('http://[fd12::1]/private')).rejects.toThrow('不允许访问本地或私有网络地址');
+        await expect(fetchRemoteText('http://100.64.0.1/private')).rejects.toThrow('不允许访问本地或私有网络地址');
+        await expect(fetchRemoteText('http://203.0.113.8/private')).rejects.toThrow('不允许访问本地或私有网络地址');
 
         const fetchMock = vi.fn(async (input) => {
             const url = String(input);

@@ -76,6 +76,7 @@
 
 - 配置 `AUTH_PASSWORD` 后，站点入口要求登录
 - Session 持久化于 KV，管理类 API 使用 Bearer Token
+- 同一客户端连续登录失败会触发短时限流（约 15 分钟窗口，每 isolate 尽力而为）
 
 ### 2. 节点管理
 

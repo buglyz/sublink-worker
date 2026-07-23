@@ -1,5 +1,11 @@
 import { ServiceError, UnauthorizedError } from './errors.js';
 
+/** Best-effort per-isolate login throttle (Workers may have multiple isolates). */
+const loginAttempts = new Map();
+const MAX_FAILED_LOGINS = 8;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const MAX_TRACKED_CLIENTS = 2000;
+
 export class AuthService {
     /**
      * @param {import('../runtime/runtimeConfig.js').KeyValueStore | null} kv
@@ -22,13 +28,22 @@ export class AuthService {
         return this.kv;
     }
 
-    async login(password) {
+    /**
+     * @param {string} password
+     * @param {{ clientKey?: string }} [meta]
+     */
+    async login(password, meta = {}) {
         if (!this.isEnabled()) {
             throw new ServiceError('AUTH_PASSWORD is not configured', 501);
         }
+        const clientKey = normalizeClientKey(meta.clientKey);
+        assertNotRateLimited(clientKey);
+
         if (!password || !await secureEquals(password, this.password)) {
+            recordFailedLogin(clientKey);
             throw new UnauthorizedError('Invalid password');
         }
+        clearFailedLogins(clientKey);
         const token = generateToken();
         const kv = this.ensureKv();
         const record = JSON.stringify({
@@ -95,4 +110,60 @@ async function secureEquals(left, right) {
         difference |= leftBytes[i] ^ rightBytes[i];
     }
     return difference === 0;
+}
+
+function normalizeClientKey(value) {
+    const key = String(value || 'unknown').trim().slice(0, 128);
+    return key || 'unknown';
+}
+
+function pruneLoginAttempts(now = Date.now()) {
+    for (const [key, entry] of loginAttempts) {
+        entry.failures = entry.failures.filter((ts) => now - ts < LOGIN_WINDOW_MS);
+        if (!entry.failures.length && (!entry.blockedUntil || entry.blockedUntil <= now)) {
+            loginAttempts.delete(key);
+        }
+    }
+    if (loginAttempts.size > MAX_TRACKED_CLIENTS) {
+        const overflow = loginAttempts.size - MAX_TRACKED_CLIENTS;
+        const keys = loginAttempts.keys();
+        for (let i = 0; i < overflow; i += 1) {
+            const next = keys.next();
+            if (next.done) break;
+            loginAttempts.delete(next.value);
+        }
+    }
+}
+
+function assertNotRateLimited(clientKey) {
+    const now = Date.now();
+    pruneLoginAttempts(now);
+    const entry = loginAttempts.get(clientKey);
+    if (!entry) return;
+    if (entry.blockedUntil && entry.blockedUntil > now) {
+        const retryAfterSec = Math.ceil((entry.blockedUntil - now) / 1000);
+        throw new ServiceError(`登录尝试过于频繁，请 ${retryAfterSec} 秒后重试`, 429);
+    }
+}
+
+function recordFailedLogin(clientKey) {
+    const now = Date.now();
+    pruneLoginAttempts(now);
+    const entry = loginAttempts.get(clientKey) || { failures: [], blockedUntil: 0 };
+    entry.failures.push(now);
+    entry.failures = entry.failures.filter((ts) => now - ts < LOGIN_WINDOW_MS);
+    if (entry.failures.length >= MAX_FAILED_LOGINS) {
+        entry.blockedUntil = now + LOGIN_WINDOW_MS;
+        entry.failures = [];
+    }
+    loginAttempts.set(clientKey, entry);
+}
+
+function clearFailedLogins(clientKey) {
+    loginAttempts.delete(clientKey);
+}
+
+/** @internal test helper */
+export function _resetLoginRateLimitForTests() {
+    loginAttempts.clear();
 }

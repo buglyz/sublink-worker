@@ -34,13 +34,14 @@ export function createApp(bindings = {}) {
     const authPassword = bindings.authPassword || env.AUTH_PASSWORD || env.SUBLINK_PASSWORD || '';
     // Prefer explicit binding; fall back to normalized runtime (after createApp(normalizeRuntime(...))).
     const storageCoordinator = bindings.storageCoordinator ?? runtime.storageCoordinator ?? null;
+    const nodeStorage = runtime.kv ? new NodeStorageService(runtime.kv, storageCoordinator) : null;
     const services = {
         shortLinks: runtime.kv ? new ShortLinkService(runtime.kv, { shortLinkTtlSeconds: runtime.config.shortLinkTtlSeconds }) : null,
         configStorage: runtime.kv ? new ConfigStorageService(runtime.kv, { configTtlSeconds: runtime.config.configTtlSeconds }) : null,
         auth: new AuthService(runtime.kv, { password: authPassword }),
-        nodes: runtime.kv ? new NodeStorageService(runtime.kv, storageCoordinator) : null,
+        nodes: nodeStorage,
         exportToken: runtime.kv ? new ExportTokenService(runtime.kv) : null,
-        nodeImport: runtime.kv ? new NodeImportService(new NodeStorageService(runtime.kv, storageCoordinator)) : null,
+        nodeImport: nodeStorage ? new NodeImportService(nodeStorage) : null,
         subscriptions: runtime.kv ? new SubscriptionStorageService(runtime.kv, storageCoordinator) : null
     };
 
@@ -64,7 +65,9 @@ export function createApp(bindings = {}) {
     app.post('/api/auth/login', async (c) => {
         try {
             const body = await c.req.json().catch(() => ({}));
-            const result = await services.auth.login(body.password || '');
+            const result = await services.auth.login(body.password || '', {
+                clientKey: getClientKey(c)
+            });
             return c.json(result);
         } catch (error) {
             return handleError(c, error, runtime.logger);
@@ -1141,6 +1144,20 @@ function extractBearerToken(c) {
     const q = c.req.query('token');
     if (q) return q;
     return '';
+}
+
+function getClientKey(c) {
+    const cf = getRequestHeader(c.req, 'CF-Connecting-IP');
+    if (cf) return String(cf).trim();
+    const xff = getRequestHeader(c.req, 'X-Forwarded-For');
+    if (xff) return String(xff).split(',')[0].trim();
+    const realIp = getRequestHeader(c.req, 'X-Real-IP');
+    if (realIp) return String(realIp).trim();
+    try {
+        return new URL(c.req.url).hostname || 'unknown';
+    } catch {
+        return 'unknown';
+    }
 }
 
 function handleError(c, error, logger) {
