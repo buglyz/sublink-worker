@@ -301,16 +301,17 @@ export const NodeLibrary = (props) => {
           this.syncTimer = setTimeout(() => this.syncNow(), 600);
         },
 
-        async syncNow() {
+        async syncNow(attempt = 0) {
           if (!this.authenticated || this.suppressSync) return;
-          const payload = JSON.stringify(this.nodes || []);
+          const intended = Array.isArray(this.nodes) ? this.nodes : [];
+          const payload = JSON.stringify(intended);
           if (payload === this.lastSyncedJson) return;
           this.saving = true;
           try {
             const res = await fetch('/api/nodes', {
               method: 'PUT',
               headers: this.headers(true),
-              body: JSON.stringify({ nodes: this.nodes, revision: this.revision })
+              body: JSON.stringify({ nodes: intended, revision: this.revision })
             });
             if (res.status === 401) {
               this.authenticated = false;
@@ -319,18 +320,32 @@ export const NodeLibrary = (props) => {
               this.flash = '登录已失效，请重新登录';
               return;
             }
+            if (res.status === 409) {
+              // Align revision from server, then re-apply this tab's intended list (max 2 retries).
+              await this.loadFromServer();
+              if (attempt < 2) {
+                this.suppressSync = true;
+                this.nodes = JSON.parse(payload);
+                setTimeout(() => {
+                  this.suppressSync = false;
+                  this.syncNow(attempt + 1);
+                }, 0);
+                return;
+              }
+              const data = await res.json().catch(() => ({}));
+              throw new Error(data.error || '节点库已在其他设备更新，请刷新后重试');
+            }
             if (!res.ok) {
               const data = await res.json().catch(() => ({}));
-              if (res.status === 409) {
-                await this.loadFromServer();
-                throw new Error(data.error || '节点库已在其他设备更新，请刷新后重试');
-              }
               throw new Error(data.error || ('同步失败 ' + res.status));
             }
             const data = await res.json().catch(() => ({}));
             this.revision = Number.isFinite(Number(data.revision)) ? Number(data.revision) : this.revision;
             this.lastSyncedJson = payload;
             localStorage.setItem(LOCAL_MIRROR, payload);
+            if (attempt > 0) {
+              this.persistMessage('已与其他端对齐后重新同步');
+            }
           } catch (e) {
             this.flash = '同步失败: ' + (e.message || '');
           } finally {

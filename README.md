@@ -87,6 +87,7 @@
   - Cloudflare Workers：节点库 / 订阅管理走 Durable Object 串行写 + `revision` 乐观锁；双端同时改库时落后一方收到 **409**，前端会重新拉取对齐
   - Node / Redis / 内存 KV（无 DO）：同样使用 `revision` 乐观锁；远程导入在 409 时最多重试 3 次。普通 `PUT /api/nodes` 仍是「读-改-写」，极端并发下后写可能覆盖先写，多端编辑请先刷新或接受 409 后重试
   - 清空节点不会删掉 revision 快照键；清空后可继续用返回的 `revision` 再写入
+- 节点库硬上限：最多 5000 条；单条 `raw` ≤ 16KB；序列化体积约 ≤ 1.5MB（超限返回 400）
 
 ### 3. 生成订阅
 
@@ -121,6 +122,11 @@
 - 可通过 GitHub Actions 在 `main` 分支推送时自动部署
 - 所需密钥示例：`AUTH_PASSWORD`、`CLOUDFLARE_API_TOKEN`、`CF_ACCOUNT_ID`
 - 部署成功后 Worker 绑定应包含：`SUBLINK_KV` + `SUBLINK_STORAGE_COORDINATOR`；登录后访问 `/api/nodes` 应返回 `{ nodes, revision }`
+- 线上冒烟（需正确 `AUTH_PASSWORD`，与 GitHub Secret / `wrangler secret` 一致）：
+
+```bash
+BASE_URL=https://sublink-worker.1960784419.workers.dev AUTH_PASSWORD='…' python3 scripts/smoke_auth.py
+```
 
 ### 7. 运行时差异（并发）
 

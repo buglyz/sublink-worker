@@ -233,6 +233,21 @@ describe('security regressions', () => {
         expect(shared.source).toBeUndefined();
     });
 
+    it('rejects oversized node libraries', async () => {
+        const kv = new MemoryKVAdapter();
+        const storage = new NodeStorageService(kv);
+        const tooMany = Array.from({ length: 5001 }, (_, i) => ({
+            raw: `${testNode}-${i}`,
+            name: `n${i}`,
+            protocol: 'ss',
+            enabled: true
+        }));
+        await expect(storage.replace(tooMany, 0)).rejects.toThrow(/节点数量不能超过/);
+
+        const longRaw = 'ss://' + 'a'.repeat(20_000);
+        await expect(storage.replace([{ raw: longRaw, name: 'x', protocol: 'ss' }], 0)).rejects.toThrow(/单条节点过长/);
+    });
+
     it('blocks private remote targets and oversized response bodies', async () => {
         await expect(fetchRemoteText('http://127.0.0.1/private')).rejects.toThrow('不允许访问本地或私有网络地址');
         await expect(fetchRemoteText('http://[::1]/private')).rejects.toThrow('不允许访问本地或私有网络地址');

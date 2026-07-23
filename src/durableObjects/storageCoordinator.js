@@ -1,5 +1,6 @@
 import { DurableObject } from 'cloudflare:workers';
 import { normalizeSubscription } from '../services/subscriptionStorageService.js';
+import { assertNodeLimits } from '../services/nodeStorageService.js';
 
 const NODES_STATE_KEY = 'nodes';
 const SUBSCRIPTIONS_STATE_KEY = 'subscriptions';
@@ -22,8 +23,14 @@ export class StorageCoordinator extends DurableObject {
         if (expectedRevision == null ? current.revision !== 0 : Number(expectedRevision) !== current.revision) {
             return conflict();
         }
+        const list = Array.isArray(nodes) ? nodes : [];
+        try {
+            assertNodeLimits(list);
+        } catch (error) {
+            return { ok: false, status: error.status || 400, error: error.message || 'invalid nodes' };
+        }
         const next = {
-            nodes: Array.isArray(nodes) ? nodes : [],
+            nodes: list,
             revision: current.revision + 1
         };
         await this.ctx.storage.put(NODES_STATE_KEY, next);

@@ -1,6 +1,11 @@
 import { InvalidPayloadError, MissingDependencyError, ServiceError } from './errors.js';
 
 const NODES_KEY = 'nodes:main';
+/** Soft product cap — keeps DO/KV payloads manageable for single-admin use. */
+export const MAX_NODE_COUNT = 5000;
+/** Approximate serialized size of the nodes array only (UTF-8). */
+export const MAX_NODES_PAYLOAD_BYTES = 1_500_000;
+export const MAX_NODE_RAW_CHARS = 16_384;
 
 export class NodeStorageService {
     constructor(kv, coordinator = null) {
@@ -47,6 +52,7 @@ export class NodeStorageService {
             throw new InvalidPayloadError('nodes must be an array');
         }
         const normalized = nodes.map(normalizeNode).filter(Boolean);
+        assertNodeLimits(normalized);
         if (this.coordinator) {
             const result = await this.coordinator.replaceNodes(normalized, normalizeRevision(expectedRevision));
             return unwrapCoordinatorResult(result);
@@ -78,10 +84,30 @@ export class NodeStorageService {
     }
 }
 
+export function assertNodeLimits(nodes) {
+    if (!Array.isArray(nodes)) {
+        throw new InvalidPayloadError('nodes must be an array');
+    }
+    if (nodes.length > MAX_NODE_COUNT) {
+        throw new InvalidPayloadError(`节点数量不能超过 ${MAX_NODE_COUNT}`);
+    }
+    let bytes = 2; // []
+    for (let i = 0; i < nodes.length; i += 1) {
+        const piece = JSON.stringify(nodes[i]);
+        bytes += new TextEncoder().encode(piece).byteLength + (i > 0 ? 1 : 0);
+        if (bytes > MAX_NODES_PAYLOAD_BYTES) {
+            throw new InvalidPayloadError(`节点库过大（上限约 ${Math.floor(MAX_NODES_PAYLOAD_BYTES / 1024)}KB）`);
+        }
+    }
+}
+
 function normalizeNode(node) {
     if (!node || typeof node !== 'object') return null;
     const raw = String(node.raw || '').trim();
     if (!raw) return null;
+    if (raw.length > MAX_NODE_RAW_CHARS) {
+        throw new InvalidPayloadError(`单条节点过长（上限 ${MAX_NODE_RAW_CHARS} 字符）`);
+    }
     const out = {
         id: String(node.id || genId()),
         raw,
