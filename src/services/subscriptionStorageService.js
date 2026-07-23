@@ -8,8 +8,9 @@ const SLUG_PREFIX = 'subfile:slug:';
  * Each item can select library node IDs + Clash template/rules and has a public slug URL.
  */
 export class SubscriptionStorageService {
-    constructor(kv) {
+    constructor(kv, coordinator = null) {
         this.kv = kv;
+        this.coordinator = coordinator;
     }
 
     ensureKv() {
@@ -20,6 +21,9 @@ export class SubscriptionStorageService {
     }
 
     async list() {
+        if (this.coordinator) {
+            return this.coordinator.listSubscriptions();
+        }
         const kv = this.ensureKv();
         const raw = await kv.get(LIST_KEY);
         if (!raw) return [];
@@ -33,6 +37,9 @@ export class SubscriptionStorageService {
     }
 
     async getById(id) {
+        if (this.coordinator) {
+            return this.coordinator.getSubscriptionById(String(id || ''));
+        }
         const list = await this.list();
         return list.find((s) => s.id === id) || null;
     }
@@ -40,6 +47,9 @@ export class SubscriptionStorageService {
     async getBySlug(slug) {
         const key = String(slug || '').trim();
         if (!key) return null;
+        if (this.coordinator) {
+            return this.coordinator.getSubscriptionBySlug(key);
+        }
         const kv = this.ensureKv();
         const id = await kv.get(SLUG_PREFIX + key);
         if (id) {
@@ -52,6 +62,14 @@ export class SubscriptionStorageService {
     }
 
     async create(input = {}) {
+        validateName(input.name);
+        if (this.coordinator) {
+            const result = await this.coordinator.createSubscription(input);
+            if (!result?.ok) {
+                throw new ServiceError(result?.error || '订阅创建失败', result?.status || 500);
+            }
+            return result.item;
+        }
         const list = await this.list();
         const now = Date.now();
         const item = normalizeSubscription({
@@ -72,6 +90,16 @@ export class SubscriptionStorageService {
     }
 
     async update(id, patch = {}) {
+        if (Object.prototype.hasOwnProperty.call(patch, 'name')) {
+            validateName(patch.name);
+        }
+        if (this.coordinator) {
+            const result = await this.coordinator.updateSubscription(String(id || ''), patch);
+            if (!result?.ok) {
+                throw new ServiceError(result?.error || '订阅更新失败', result?.status || 500);
+            }
+            return result.item;
+        }
         const list = await this.list();
         const idx = list.findIndex((s) => s.id === id);
         if (idx < 0) throw new ServiceError('订阅不存在', 404);
@@ -98,6 +126,13 @@ export class SubscriptionStorageService {
     }
 
     async remove(id) {
+        if (this.coordinator) {
+            const result = await this.coordinator.removeSubscription(String(id || ''));
+            if (!result?.ok) {
+                throw new ServiceError(result?.error || '订阅删除失败', result?.status || 500);
+            }
+            return true;
+        }
         const list = await this.list();
         const prev = list.find((s) => s.id === id);
         if (!prev) throw new ServiceError('订阅不存在', 404);
@@ -125,7 +160,7 @@ export class SubscriptionStorageService {
     }
 }
 
-function normalizeSubscription(raw) {
+export function normalizeSubscription(raw) {
     if (!raw || typeof raw !== 'object') return null;
     const id = String(raw.id || genId());
     const name = String(raw.name || '').trim().slice(0, 80);
@@ -152,15 +187,17 @@ function normalizeSubscription(raw) {
 }
 
 function genId() {
-    return 'sub_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+    return 'sub_' + crypto.randomUUID();
+}
+
+function validateName(value) {
+    if (!String(value || '').trim()) {
+        throw new InvalidPayloadError('订阅名称不能为空');
+    }
 }
 
 function genSlug() {
     const bytes = new Uint8Array(6);
-    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-        crypto.getRandomValues(bytes);
-    } else {
-        for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
-    }
+    crypto.getRandomValues(bytes);
     return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('').slice(0, 10);
 }

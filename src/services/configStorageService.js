@@ -2,6 +2,10 @@ import yaml from 'js-yaml';
 import { generateWebPath } from '../utils.js';
 import { InvalidPayloadError, MissingDependencyError } from './errors.js';
 
+const CONFIG_PREFIX = 'config:';
+const CONFIG_TYPES = new Set(['clash', 'singbox', 'surge']);
+const CONFIG_ID_PATTERN = /^(clash|singbox|surge)_[A-Za-z0-9]{8}$/;
+
 export class ConfigStorageService {
     constructor(kv, options = {}) {
         this.kv = kv;
@@ -17,7 +21,14 @@ export class ConfigStorageService {
 
     async getConfigById(configId) {
         const kv = this.ensureKv();
-        const stored = await kv.get(configId);
+        const id = normalizeConfigId(configId);
+        if (!id) return null;
+
+        let stored = await kv.get(storageKey(id));
+        if (!stored) {
+            // Keep prior user-created configs readable without permitting arbitrary KV reads.
+            stored = await kv.get(id);
+        }
         if (!stored) return null;
         try {
             return JSON.parse(stored);
@@ -27,8 +38,8 @@ export class ConfigStorageService {
     }
 
     async saveConfig(type, content) {
-        if (!type) {
-            throw new InvalidPayloadError('Missing config type');
+        if (!CONFIG_TYPES.has(type)) {
+            throw new InvalidPayloadError('Unsupported config type');
         }
 
         const kv = this.ensureKv();
@@ -40,7 +51,7 @@ export class ConfigStorageService {
 
         const ttlSeconds = this.options.configTtlSeconds;
         const putOptions = ttlSeconds ? { expirationTtl: ttlSeconds } : undefined;
-        await kv.put(configId, configString, putOptions);
+        await kv.put(storageKey(configId), configString, putOptions);
         return configId;
     }
 
@@ -61,4 +72,13 @@ export class ConfigStorageService {
         }
         throw new InvalidPayloadError('Unsupported config content type');
     }
+}
+
+function normalizeConfigId(value) {
+    const configId = String(value || '').trim();
+    return CONFIG_ID_PATTERN.test(configId) ? configId : null;
+}
+
+function storageKey(configId) {
+    return CONFIG_PREFIX + configId;
 }

@@ -7,7 +7,7 @@
   <p>
     本项目在 <a href="https://github.com/7Sageer/sublink-worker">7Sageer/sublink-worker</a> 之上扩展，
     产品信息架构与交互参考 <a href="https://github.com/iluobei/miaomiaowu">妙妙屋 (miaomiaowu)</a>，
-    在无常驻后端的前提下，通过 Workers 与 KV 提供登录鉴权、节点库同步、可管理订阅及 Clash 配置导出。
+    在无常驻后端的前提下，通过 Workers、KV 与 Durable Object 提供登录鉴权、节点库同步、可管理订阅及 Clash 配置导出。
   </p>
 
   <p>
@@ -45,7 +45,7 @@
    │         │            │
  Cloudflare  Node.js     Vercel
  Workers     + Redis     + KV REST
- SUBLINK_KV
+ KV + Durable Object
 ```
 
 | 模块 | 路径 | 说明 |
@@ -62,10 +62,10 @@
 | 键 / 前缀 | 用途 |
 |-----------|------|
 | 会话 token | 管理员登录 session（依赖 `AUTH_PASSWORD`） |
-| `nodes:main` | 节点库 |
+| `nodes:main` / `subscriptions:main` | 旧版 KV 数据；首次访问时迁移到 Durable Object |
 | `export:token:main` | 全库导出 token 及生成偏好（模板 / 规则） |
-| `subscriptions:main` | 可管理订阅列表 |
-| `subfile:slug:*` | 订阅 slug 索引 |
+| Durable Object SQLite | 节点库与订阅管理的强一致写入和版本冲突检测 |
+| `shortlink:*` / `config:*` | 公开短链与 base config，和内部数据隔离 |
 | 短链 / base config | 上游 sublink 原有能力 |
 
 ---
@@ -113,7 +113,7 @@
 
 ### 6. 部署
 
-- 目标运行时：Cloudflare Workers，绑定 `SUBLINK_KV`
+- 目标运行时：Cloudflare Workers，绑定 `SUBLINK_KV` 与 `SUBLINK_STORAGE_COORDINATOR`
 - 可通过 GitHub Actions 在 `main` 分支推送时自动部署
 - 所需密钥示例：`AUTH_PASSWORD`、`CLOUDFLARE_API_TOKEN`、`CF_ACCOUNT_ID`
 
@@ -180,7 +180,7 @@ node dist/node-server.cjs
 
 - Hono（含 JSX 服务端渲染）
 - Alpine.js、Tailwind CSS（CDN）
-- Cloudflare Workers / KV，或 Node.js + Redis / Upstash
+- Cloudflare Workers / KV / Durable Object，或 Node.js + Redis / Upstash
 - js-yaml；协议解析与配置构建逻辑继承自 sublink-worker
 - Vitest 与 `@cloudflare/vitest-pool-workers`
 

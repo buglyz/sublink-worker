@@ -26,14 +26,15 @@ export class AuthService {
         if (!this.isEnabled()) {
             throw new ServiceError('AUTH_PASSWORD is not configured', 501);
         }
-        if (!password || password !== this.password) {
+        if (!password || !await secureEquals(password, this.password)) {
             throw new UnauthorizedError('Invalid password');
         }
         const token = generateToken();
         const kv = this.ensureKv();
         const record = JSON.stringify({
             createdAt: Date.now(),
-            expiresAt: Date.now() + this.sessionTtlSeconds * 1000
+            expiresAt: Date.now() + this.sessionTtlSeconds * 1000,
+            passwordFingerprint: await fingerprint(this.password)
         });
         await kv.put(sessionKey(token), record, { expirationTtl: this.sessionTtlSeconds });
         return { token, expiresIn: this.sessionTtlSeconds };
@@ -56,6 +57,10 @@ export class AuthService {
                 await kv.delete(sessionKey(token));
                 return false;
             }
+            if (!data.passwordFingerprint || !await secureEquals(data.passwordFingerprint, await fingerprint(this.password))) {
+                await kv.delete(sessionKey(token));
+                return false;
+            }
         } catch {
             return false;
         }
@@ -69,10 +74,25 @@ function sessionKey(token) {
 
 function generateToken() {
     const bytes = new Uint8Array(24);
-    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-        crypto.getRandomValues(bytes);
-    } else {
-        for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
-    }
+    crypto.getRandomValues(bytes);
     return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function fingerprint(value) {
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+    return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+async function secureEquals(left, right) {
+    const [leftDigest, rightDigest] = await Promise.all([
+        crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(left))),
+        crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(right)))
+    ]);
+    const leftBytes = new Uint8Array(leftDigest);
+    const rightBytes = new Uint8Array(rightDigest);
+    let difference = 0;
+    for (let i = 0; i < leftBytes.length; i += 1) {
+        difference |= leftBytes[i] ^ rightBytes[i];
+    }
+    return difference === 0;
 }

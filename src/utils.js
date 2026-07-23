@@ -244,12 +244,14 @@ export function deepCopy(obj) {
 }
 
 export function generateWebPath(length = PATH_LENGTH) {
-	const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-	let result = ''
-	for (let i = 0; i < length; i++) {
-		result += characters.charAt(Math.floor(Math.random() * characters.length))
+	const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+	const cryptoApi = globalThis.crypto;
+	if (!cryptoApi?.getRandomValues) {
+		throw new Error('Secure random generator is unavailable');
 	}
-	return result
+	const bytes = new Uint8Array(length);
+	cryptoApi.getRandomValues(bytes);
+	return Array.from(bytes, (byte) => characters[byte % characters.length]).join('');
 }
 
 export function parseServerInfo(serverInfo) {

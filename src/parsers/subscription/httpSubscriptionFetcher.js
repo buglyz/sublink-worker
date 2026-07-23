@@ -1,5 +1,6 @@
 import { decodeBase64 } from '../../utils.js';
 import { parseSubscriptionContent } from './subscriptionContentParser.js';
+import { fetchRemoteText } from './remoteFetch.js';
 
 const SUBSCRIPTION_URI_PATTERN = /^(ss|vmess|vless|hysteria|hysteria2|hy2|trojan|tuic|anytls|http|https):\/\//i;
 
@@ -124,18 +125,7 @@ function detectFormat(content) {
  */
 export async function fetchSubscription(url, userAgent) {
     try {
-        const headers = new Headers();
-        if (userAgent) {
-            headers.set('User-Agent', userAgent);
-        }
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: headers
-        });
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const text = await response.text();
+        const { text } = await fetchRemoteText(url, { userAgent });
         const decodedText = decodeContent(text);
 
         return parseSubscriptionContent(decodedText);
@@ -153,24 +143,13 @@ export async function fetchSubscription(url, userAgent) {
  */
 export async function fetchSubscriptionWithFormat(url, userAgent) {
     try {
-        const headers = new Headers();
-        if (userAgent) {
-            headers.set('User-Agent', userAgent);
-        }
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: headers
-        });
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const text = await response.text();
+        const { text, response, url: resolvedUrl } = await fetchRemoteText(url, { userAgent });
         const content = decodeContent(text);
         const format = detectFormat(content);
 
         const subscriptionUserinfo = response.headers.get('subscription-userinfo') || undefined;
 
-        return { content, format, url, subscriptionUserinfo };
+        return { content, format, url: resolvedUrl, subscriptionUserinfo };
     } catch (error) {
         console.error('Error fetching subscription:', error);
         return null;

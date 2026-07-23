@@ -68,7 +68,8 @@ export class NodeImportService {
             );
         }
 
-        let existing = await this.nodeStorage.list();
+        const snapshot = await this.nodeStorage.getSnapshot();
+        let existing = snapshot.nodes;
         let removed = 0;
         let added = 0;
         let updated = 0;
@@ -119,7 +120,8 @@ export class NodeImportService {
             skipped = Math.max(0, candidates.length - added - updated);
         }
 
-        const nodes = await this.nodeStorage.save(existing);
+        const saved = await this.nodeStorage.replace(existing, snapshot.revision);
+        const nodes = saved.nodes;
         const format = fetched.format || 'unknown';
         const message = buildMessage({ mode, added, updated, removed, skipped, format, totalCandidates: candidates.length });
 
@@ -136,6 +138,7 @@ export class NodeImportService {
             sourceKey,
             samples,
             nodes,
+            revision: saved.revision,
             message
         };
     }

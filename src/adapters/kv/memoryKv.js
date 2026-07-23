@@ -12,38 +12,23 @@ export class MemoryKVAdapter {
     async put(key, value, options = {}) {
         this.store.set(key, value);
         if (options.expirationTtl) {
-            this.scheduleExpiration(key, options.expirationTtl);
+            this.expirations.set(key, Date.now() + options.expirationTtl * 1000);
         } else {
-            this.clearExpiration(key);
+            this.expirations.delete(key);
         }
     }
 
     async delete(key) {
         this.store.delete(key);
-        this.clearExpiration(key);
-    }
-
-    scheduleExpiration(key, ttlSeconds) {
-        this.clearExpiration(key);
-        const timeoutId = setTimeout(() => {
-            this.store.delete(key);
-            this.expirations.delete(key);
-        }, ttlSeconds * 1000);
-        this.expirations.set(key, timeoutId);
-    }
-
-    clearExpiration(key) {
-        const timeoutId = this.expirations.get(key);
-        if (timeoutId) {
-            clearTimeout(timeoutId);
-            this.expirations.delete(key);
-        }
+        this.expirations.delete(key);
     }
 
     cleanExpired(key) {
-        if (!this.expirations.has(key)) return;
-        if (!this.store.has(key)) {
-            this.clearExpiration(key);
+        const expiresAt = this.expirations.get(key);
+        if (expiresAt == null) return;
+        if (expiresAt <= Date.now() || !this.store.has(key)) {
+            this.store.delete(key);
+            this.expirations.delete(key);
         }
     }
 }

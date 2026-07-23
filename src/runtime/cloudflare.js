@@ -7,6 +7,9 @@ export function createCloudflareRuntime(env) {
         logger: console,
         config: {},
         env: env || {},
-        authPassword: env?.AUTH_PASSWORD || env?.SUBLINK_PASSWORD || ''
+        authPassword: env?.AUTH_PASSWORD || env?.SUBLINK_PASSWORD || '',
+        storageCoordinator: env?.SUBLINK_STORAGE_COORDINATOR
+            ? env.SUBLINK_STORAGE_COORDINATOR.getByName('primary')
+            : null
     };
 }

@@ -9,6 +9,14 @@ kv_namespaces = [
   { binding = "SUBLINK_KV", id = "e6293e2c43894b59ba1a7aa7a78e7eca" }
 ]
 
+[[durable_objects.bindings]]
+name = "SUBLINK_STORAGE_COORDINATOR"
+class_name = "StorageCoordinator"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["StorageCoordinator"]
+
 [assets]
 directory = "./public"
 

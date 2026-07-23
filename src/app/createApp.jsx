@@ -12,7 +12,7 @@ import { ClashConfigBuilder } from '../builders/ClashConfigBuilder.js';
 import { TemplateClashBuilder, listTemplates, listTemplateDetails } from '../builders/TemplateClashBuilder.js';
 import { SurgeConfigBuilder } from '../builders/SurgeConfigBuilder.js';
 import { createTranslator, resolveLanguage } from '../i18n/index.js';
-import { encodeBase64, tryDecodeSubscriptionLines } from '../utils.js';
+import { encodeBase64 } from '../utils.js';
 import { APP_NAME, APP_SUBTITLE } from '../constants.js';
 import { ShortLinkService } from '../services/shortLinkService.js';
 import { ConfigStorageService } from '../services/configStorageService.js';
@@ -21,6 +21,7 @@ import { NodeStorageService } from '../services/nodeStorageService.js';
 import { ExportTokenService } from '../services/exportTokenService.js';
 import { NodeImportService } from '../services/nodeImportService.js';
 import { SubscriptionStorageService } from '../services/subscriptionStorageService.js';
+import { resolveXraySubscriptionLines } from '../services/xraySubscriptionService.js';
 import { ServiceError, MissingDependencyError, UnauthorizedError, InvalidPayloadError } from '../services/errors.js';
 import { normalizeRuntime } from '../runtime/runtimeConfig.js';
 import { PREDEFINED_RULE_SETS, SING_BOX_CONFIG, SING_BOX_CONFIG_V1_11, generateSubconverterConfig } from '../config/index.js';
@@ -35,10 +36,10 @@ export function createApp(bindings = {}) {
         shortLinks: runtime.kv ? new ShortLinkService(runtime.kv, { shortLinkTtlSeconds: runtime.config.shortLinkTtlSeconds }) : null,
         configStorage: runtime.kv ? new ConfigStorageService(runtime.kv, { configTtlSeconds: runtime.config.configTtlSeconds }) : null,
         auth: new AuthService(runtime.kv, { password: authPassword }),
-        nodes: runtime.kv ? new NodeStorageService(runtime.kv) : null,
+        nodes: runtime.kv ? new NodeStorageService(runtime.kv, bindings.storageCoordinator || runtime.storageCoordinator) : null,
         exportToken: runtime.kv ? new ExportTokenService(runtime.kv) : null,
-        nodeImport: runtime.kv ? new NodeImportService(new NodeStorageService(runtime.kv)) : null,
-        subscriptions: runtime.kv ? new SubscriptionStorageService(runtime.kv) : null
+        nodeImport: runtime.kv ? new NodeImportService(new NodeStorageService(runtime.kv, bindings.storageCoordinator || runtime.storageCoordinator)) : null,
+        subscriptions: runtime.kv ? new SubscriptionStorageService(runtime.kv, bindings.storageCoordinator || runtime.storageCoordinator) : null
     };
 
     const app = new Hono();
@@ -107,8 +108,8 @@ export function createApp(bindings = {}) {
 
     app.get('/api/nodes', requireAuth, async (c) => {
         try {
-            const nodes = await requireNodeStorage(services.nodes).list();
-            return c.json({ nodes });
+            const snapshot = await requireNodeStorage(services.nodes).getSnapshot();
+            return c.json(snapshot);
         } catch (error) {
             return handleError(c, error, runtime.logger);
         }
@@ -117,8 +118,8 @@ export function createApp(bindings = {}) {
     app.put('/api/nodes', requireAuth, async (c) => {
         try {
             const body = await c.req.json().catch(() => ({}));
-            const nodes = await requireNodeStorage(services.nodes).save(body.nodes || []);
-            return c.json({ nodes });
+            const snapshot = await requireNodeStorage(services.nodes).replace(body.nodes || [], body.revision);
+            return c.json(snapshot);
         } catch (error) {
             return handleError(c, error, runtime.logger);
         }
@@ -126,8 +127,9 @@ export function createApp(bindings = {}) {
 
     app.delete('/api/nodes', requireAuth, async (c) => {
         try {
-            const nodes = await requireNodeStorage(services.nodes).clear();
-            return c.json({ nodes });
+            const body = await c.req.json().catch(() => ({}));
+            const snapshot = await requireNodeStorage(services.nodes).clear(body.revision);
+            return c.json(snapshot);
         } catch (error) {
             return handleError(c, error, runtime.logger);
         }
@@ -810,53 +812,28 @@ export function createApp(bindings = {}) {
     });
 
     app.get('/xray', async (c) => {
-        const inputString = c.req.query('config');
-        if (!inputString) {
-            return c.text('Missing config parameter', 400);
-        }
-
-        const proxylist = inputString.split('\n');
-        const finalProxyList = [];
-        let subscriptionUserinfo;
-        const userAgent = c.req.query('ua') || getRequestHeader(c.req, 'User-Agent') || DEFAULT_USER_AGENT;
-        const headers = { 'User-Agent': userAgent };
-
-        for (const proxy of proxylist) {
-            const trimmedProxy = proxy.trim();
-            if (!trimmedProxy) continue;
-
-            if (trimmedProxy.startsWith('http://') || trimmedProxy.startsWith('https://')) {
-                try {
-                    const response = await fetch(trimmedProxy, { method: 'GET', headers });
-                    const fetchedUserinfo = response.headers.get('subscription-userinfo');
-                    if (fetchedUserinfo && subscriptionUserinfo === undefined) {
-                        subscriptionUserinfo = fetchedUserinfo;
-                    }
-                    const text = await response.text();
-                    let processed = tryDecodeSubscriptionLines(text, { decodeUriComponent: true });
-                    if (!Array.isArray(processed)) processed = [processed];
-                    finalProxyList.push(...processed.filter(item => typeof item === 'string' && item.trim() !== ''));
-                } catch (e) {
-                    runtime.logger.warn('Failed to fetch the proxy', e);
-                }
-            } else {
-                let processed = tryDecodeSubscriptionLines(trimmedProxy);
-                if (!Array.isArray(processed)) processed = [processed];
-                finalProxyList.push(...processed.filter(item => typeof item === 'string' && item.trim() !== ''));
+        try {
+            const inputString = c.req.query('config');
+            if (!inputString) {
+                return c.text('Missing config parameter', 400);
             }
-        }
 
-        const finalString = finalProxyList.join('\n');
-        if (!finalString) {
-            return c.text('Missing config parameter', 400);
-        }
+            const userAgent = c.req.query('ua') || getRequestHeader(c.req, 'User-Agent') || DEFAULT_USER_AGENT;
+            const { lines, subscriptionUserinfo } = await resolveXraySubscriptionLines(inputString, userAgent, runtime.logger);
+            const finalString = lines.join('\n');
+            if (!finalString) {
+                return c.text('Missing config parameter', 400);
+            }
 
-        const responseHeaders = {};
-        if (subscriptionUserinfo) {
-            responseHeaders['subscription-userinfo'] = subscriptionUserinfo;
-        }
+            const responseHeaders = {};
+            if (subscriptionUserinfo) {
+                responseHeaders['subscription-userinfo'] = subscriptionUserinfo;
+            }
 
-        return c.text(encodeBase64(finalString), 200, responseHeaders);
+            return c.text(encodeBase64(finalString), 200, responseHeaders);
+        } catch (error) {
+            return handleError(c, error, runtime.logger);
+        }
     });
 
     app.get('/shorten-v2', async (c) => {

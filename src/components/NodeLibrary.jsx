@@ -41,7 +41,7 @@ export const NodeLibrary = (props) => {
         return s.slice(0, 40) + (s.length > 40 ? '…' : '');
       };
 
-      const uid = () => 'n_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+      const uid = () => 'n_' + crypto.randomUUID();
 
       return {
         nodes: [],
@@ -69,6 +69,7 @@ export const NodeLibrary = (props) => {
         syncTimer: null,
         suppressSync: false,
         lastSyncedJson: '',
+        revision: null,
 
         async init() {
           const self = this;
@@ -230,6 +231,7 @@ export const NodeLibrary = (props) => {
             }
             const data = await res.json();
             this.nodes = Array.isArray(data.nodes) ? data.nodes : [];
+            this.revision = Number.isFinite(Number(data.revision)) ? Number(data.revision) : null;
             this.lastSyncedJson = JSON.stringify(this.nodes);
             localStorage.setItem(LOCAL_MIRROR, JSON.stringify(this.nodes));
             await this.loadExportToken();
@@ -308,7 +310,7 @@ export const NodeLibrary = (props) => {
             const res = await fetch('/api/nodes', {
               method: 'PUT',
               headers: this.headers(true),
-              body: JSON.stringify({ nodes: this.nodes })
+              body: JSON.stringify({ nodes: this.nodes, revision: this.revision })
             });
             if (res.status === 401) {
               this.authenticated = false;
@@ -321,8 +323,8 @@ export const NodeLibrary = (props) => {
               const data = await res.json().catch(() => ({}));
               throw new Error(data.error || ('同步失败 ' + res.status));
             }
-            // Do NOT reassign this.nodes from server response — that re-triggers $watch and
-            // causes endless "同步中…" flicker. Trust local UI state after successful PUT.
+            const data = await res.json().catch(() => ({}));
+            this.revision = Number.isFinite(Number(data.revision)) ? Number(data.revision) : this.revision;
             this.lastSyncedJson = payload;
             localStorage.setItem(LOCAL_MIRROR, payload);
           } catch (e) {
@@ -436,6 +438,7 @@ export const NodeLibrary = (props) => {
             if (Array.isArray(data.nodes)) {
               this.suppressSync = true;
               this.nodes = data.nodes;
+              this.revision = Number.isFinite(Number(data.revision)) ? Number(data.revision) : this.revision;
               this.lastSyncedJson = JSON.stringify(this.nodes);
               localStorage.setItem(LOCAL_MIRROR, this.lastSyncedJson);
               setTimeout(() => { this.suppressSync = false; }, 0);
@@ -502,11 +505,24 @@ export const NodeLibrary = (props) => {
         async clearAll() {
           if (!this.nodes.length) return;
           if (!confirm('清空全部 ' + this.nodes.length + ' 个节点？')) return;
-          this.nodes = [];
           try {
-            await fetch('/api/nodes', { method: 'DELETE', headers: this.headers() });
-          } catch {}
-          this.persistMessage('节点库已清空');
+            const res = await fetch('/api/nodes', {
+              method: 'DELETE',
+              headers: this.headers(true),
+              body: JSON.stringify({ revision: this.revision })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || '清空失败');
+            this.suppressSync = true;
+            this.nodes = data.nodes || [];
+            this.revision = Number.isFinite(Number(data.revision)) ? Number(data.revision) : this.revision;
+            this.lastSyncedJson = JSON.stringify(this.nodes);
+            localStorage.setItem(LOCAL_MIRROR, this.lastSyncedJson);
+            setTimeout(() => { this.suppressSync = false; }, 0);
+            this.persistMessage('节点库已清空');
+          } catch (e) {
+            this.persistMessage(e.message || '清空失败');
+          }
         },
 
         subUrl() {
