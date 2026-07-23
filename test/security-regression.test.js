@@ -3,16 +3,20 @@ import { createApp } from '../src/app/createApp.jsx';
 import { MemoryKVAdapter } from '../src/adapters/kv/memoryKv.js';
 import { AuthService } from '../src/services/authService.js';
 import { NodeStorageService } from '../src/services/nodeStorageService.js';
+import { NodeImportService } from '../src/services/nodeImportService.js';
+import { SubscriptionStorageService } from '../src/services/subscriptionStorageService.js';
+import { normalizeRuntime } from '../src/runtime/runtimeConfig.js';
 import { fetchRemoteText } from '../src/parsers/subscription/remoteFetch.js';
 
 const testNode = 'ss://YWVzLTEyOC1nY206cGFzc3dvcmQ=@example.com:443#audit';
 
-function createTestApp(kv, authPassword = '') {
+function createTestApp(kv, authPassword = '', extra = {}) {
     return createApp({
         kv,
         authPassword,
         logger: console,
-        config: { configTtlSeconds: 60, shortLinkTtlSeconds: null }
+        config: { configTtlSeconds: 60, shortLinkTtlSeconds: null },
+        ...extra
     });
 }
 
@@ -110,12 +114,96 @@ describe('security regressions', () => {
         expect(restored.revision).toBeGreaterThan(cleared.revision);
     });
 
+    it('preserves storageCoordinator through normalizeRuntime into createApp', async () => {
+        const coordinator = {
+            async getNodes() {
+                return {
+                    nodes: [{ id: 'n1', raw: testNode, enabled: true, name: 'a', protocol: 'ss' }],
+                    revision: 7
+                };
+            },
+            async listSubscriptions() {
+                return [];
+            }
+        };
+        const kv = new MemoryKVAdapter();
+        const runtime = normalizeRuntime({
+            kv,
+            storageCoordinator: coordinator,
+            config: { configTtlSeconds: 60, shortLinkTtlSeconds: null }
+        });
+        expect(runtime.storageCoordinator).toBe(coordinator);
+
+        const app = createApp({ ...runtime, authPassword: '' });
+        const res = await app.request('http://localhost/api/nodes');
+        expect(res.status).toBe(200);
+        const body = await res.json();
+        expect(body.nodes).toHaveLength(1);
+        expect(body.revision).toBe(7);
+    });
+
+    it('retries remote import after a single revision conflict', async () => {
+        let snapshot = {
+            nodes: [{ id: 'keep', raw: `${testNode}-keep`, name: 'keep', protocol: 'ss', enabled: true }],
+            revision: 1
+        };
+        let forceConflictOnce = true;
+        const storage = {
+            async getSnapshot() {
+                return { nodes: snapshot.nodes.map((n) => ({ ...n })), revision: snapshot.revision };
+            },
+            async replace(nodes, expected) {
+                if (forceConflictOnce) {
+                    forceConflictOnce = false;
+                    snapshot = {
+                        nodes: [
+                            ...snapshot.nodes,
+                            { id: 'peer', raw: `${testNode}-peer`, name: 'peer', protocol: 'ss', enabled: true }
+                        ],
+                        revision: snapshot.revision + 1
+                    };
+                    const err = new Error('节点库已在其他设备更新，请刷新后重试');
+                    err.status = 409;
+                    throw err;
+                }
+                if (expected !== snapshot.revision) {
+                    const err = new Error('conflict');
+                    err.status = 409;
+                    throw err;
+                }
+                snapshot = { nodes, revision: snapshot.revision + 1 };
+                return snapshot;
+            }
+        };
+        const importer = new NodeImportService(storage);
+        vi.stubGlobal('fetch', vi.fn(async () => new Response(testNode, { status: 200 })));
+        const result = await importer.importFromUrl('https://example.com/sub', { mode: 'merge' });
+        vi.unstubAllGlobals();
+
+        expect(result.added).toBeGreaterThanOrEqual(1);
+        expect(result.nodes.some((n) => n.raw === testNode || String(n.raw).includes('audit'))).toBe(true);
+        expect(result.nodes.some((n) => n.id === 'peer' || String(n.raw).includes('peer'))).toBe(true);
+        expect(forceConflictOnce).toBe(false);
+    });
+
+    it('regenerates subscription slug on collision for pure KV create', async () => {
+        const kv = new MemoryKVAdapter();
+        const service = new SubscriptionStorageService(kv);
+        const first = await service.create({ name: 'A', slug: 'taken-slug' });
+        expect(first.slug).toBe('taken-slug');
+
+        await expect(service.create({ name: 'B', slug: 'taken-slug' })).rejects.toThrow('短链已存在');
+
+        const second = await service.create({ name: 'C' });
+        expect(second.slug).toBeTruthy();
+        expect(second.slug).not.toBe('taken-slug');
+    });
+
     it('blocks private remote targets and oversized response bodies', async () => {
         await expect(fetchRemoteText('http://127.0.0.1/private')).rejects.toThrow('不允许访问本地或私有网络地址');
         await expect(fetchRemoteText('http://[::1]/private')).rejects.toThrow('不允许访问本地或私有网络地址');
         await expect(fetchRemoteText('http://[fd12::1]/private')).rejects.toThrow('不允许访问本地或私有网络地址');
 
-        // Domain labels that merely start with fd/fc must not be treated as private IPv6.
         const fetchMock = vi.fn(async (input) => {
             const url = String(input);
             if (url.includes('fd-example.com')) {

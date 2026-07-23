@@ -72,7 +72,7 @@ export class SubscriptionStorageService {
         }
         const list = await this.list();
         const now = Date.now();
-        const item = normalizeSubscription({
+        let item = normalizeSubscription({
             ...input,
             id: input.id || genId(),
             slug: input.slug || genSlug(),
@@ -80,8 +80,12 @@ export class SubscriptionStorageService {
             updatedAt: now
         });
         if (!item.name) throw new InvalidPayloadError('订阅名称不能为空');
-        if (list.some((s) => s.slug === item.slug)) {
-            item.slug = genSlug();
+        // Match DO path: keep regenerating until slug is unique in the list.
+        while (list.some((s) => s.slug === item.slug)) {
+            if (input.slug) {
+                throw new InvalidPayloadError('短链已存在，请换一个');
+            }
+            item = { ...item, slug: genSlug() };
         }
         list.unshift(item);
         await this.saveAll(list);

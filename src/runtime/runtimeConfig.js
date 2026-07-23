@@ -16,11 +16,17 @@
  */
 
 /**
+ * Storage coordinator stub (Durable Object RPC or test double).
+ * @typedef {object} StorageCoordinatorStub
+ */
+
+/**
  * @typedef {Object} RuntimeBindings
  * @property {KeyValueStore | null} [kv]
  * @property {AssetFetcher | null} [assetFetcher]
  * @property {Console} [logger]
  * @property {RuntimeConfig} [config]
+ * @property {StorageCoordinatorStub | null} [storageCoordinator]
  */
 
 const DEFAULTS = {
@@ -29,9 +35,16 @@ const DEFAULTS = {
 
 /**
  * Normalize optional runtime bindings and provide safe defaults.
+ * Passes through storageCoordinator so createApp(normalizeRuntime(runtime)) keeps DO wiring.
  *
  * @param {RuntimeBindings | undefined} runtime
- * @returns {{ kv: KeyValueStore | null, assetFetcher: AssetFetcher | null, logger: Console, config: RuntimeConfig & { configTtlSeconds: number, shortLinkTtlSeconds: number | null } }}
+ * @returns {{
+ *   kv: KeyValueStore | null,
+ *   assetFetcher: AssetFetcher | null,
+ *   logger: Console,
+ *   config: RuntimeConfig & { configTtlSeconds: number, shortLinkTtlSeconds: number | null },
+ *   storageCoordinator: StorageCoordinatorStub | null
+ * }}
  */
 export function normalizeRuntime(runtime = {}) {
     return {
@@ -41,6 +54,7 @@ export function normalizeRuntime(runtime = {}) {
         config: {
             configTtlSeconds: runtime.config?.configTtlSeconds ?? DEFAULTS.configTtlSeconds,
             shortLinkTtlSeconds: runtime.config?.shortLinkTtlSeconds ?? null
-        }
+        },
+        storageCoordinator: runtime.storageCoordinator ?? null
     };
 }

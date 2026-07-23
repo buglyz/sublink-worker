@@ -68,80 +68,103 @@ export class NodeImportService {
             );
         }
 
-        const snapshot = await this.nodeStorage.getSnapshot();
-        let existing = snapshot.nodes;
-        let removed = 0;
-        let added = 0;
-        let updated = 0;
-        let skipped = 0;
-        const samples = [];
-
-        if (mode === 'replace') {
-            const before = existing.length;
-            existing = existing.filter((n) => !belongsToSource(n, sourceKey, target));
-            removed = before - existing.length;
-
-            const existingRaws = new Set(existing.map((n) => n.raw));
-            for (const node of candidates) {
-                if (existingRaws.has(node.raw)) {
-                    skipped += 1;
-                    continue;
+        const format = fetched.format || 'unknown';
+        // Optimistic concurrency: re-read + re-apply on 409 (pure KV races / multi-tab).
+        const maxAttempts = 3;
+        let lastError;
+        for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+            const snapshot = await this.nodeStorage.getSnapshot();
+            const applied = applyImport(snapshot.nodes, candidates, {
+                mode,
+                sourceKey,
+                target,
+                now
+            });
+            try {
+                const saved = await this.nodeStorage.replace(applied.nodes, snapshot.revision);
+                const message = buildMessage({
+                    mode,
+                    added: applied.added,
+                    updated: applied.updated,
+                    removed: applied.removed,
+                    skipped: applied.skipped,
+                    format,
+                    totalCandidates: candidates.length
+                });
+                return {
+                    mode,
+                    added: applied.added,
+                    updated: applied.updated,
+                    removed: applied.removed,
+                    skipped: applied.skipped,
+                    parsed: candidates.length,
+                    total: saved.nodes.length,
+                    format,
+                    source: target,
+                    sourceKey,
+                    samples: applied.samples,
+                    nodes: saved.nodes,
+                    revision: saved.revision,
+                    message
+                };
+            } catch (error) {
+                lastError = error;
+                if (error?.status !== 409 || attempt === maxAttempts - 1) {
+                    throw error;
                 }
+            }
+        }
+        throw lastError || new ServiceError('导入失败：节点库版本冲突', 409);
+    }
+}
+
+function applyImport(existingNodes, candidates, { mode, sourceKey, target, now }) {
+    let existing = Array.isArray(existingNodes) ? existingNodes.slice() : [];
+    let removed = 0;
+    let added = 0;
+    let updated = 0;
+    let skipped = 0;
+    const samples = [];
+
+    if (mode === 'replace') {
+        const before = existing.length;
+        existing = existing.filter((n) => !belongsToSource(n, sourceKey, target));
+        removed = before - existing.length;
+
+        const existingRaws = new Set(existing.map((n) => n.raw));
+        for (const node of candidates) {
+            if (existingRaws.has(node.raw)) {
+                skipped += 1;
+                continue;
+            }
+            existing.push(node);
+            existingRaws.add(node.raw);
+            added += 1;
+            if (samples.length < 5) samples.push(node.name);
+        }
+    } else {
+        const byRaw = new Map(existing.map((n) => [n.raw, n]));
+        for (const node of candidates) {
+            const prev = byRaw.get(node.raw);
+            if (prev) {
+                prev.name = node.name || prev.name;
+                prev.protocol = node.protocol || prev.protocol;
+                prev.tag = node.tag || prev.tag;
+                prev.source = sourceKey;
+                prev.sourceUrl = target;
+                prev.updatedAt = now;
+                updated += 1;
+            } else {
                 existing.push(node);
-                existingRaws.add(node.raw);
+                byRaw.set(node.raw, node);
                 added += 1;
                 if (samples.length < 5) samples.push(node.name);
             }
-        } else {
-            // merge: update name/meta if same raw exists; else append
-            const byRaw = new Map(existing.map((n) => [n.raw, n]));
-            for (const node of candidates) {
-                const prev = byRaw.get(node.raw);
-                if (prev) {
-                    // refresh metadata / re-tag to this source
-                    prev.name = node.name || prev.name;
-                    prev.protocol = node.protocol || prev.protocol;
-                    prev.tag = node.tag || prev.tag;
-                    prev.source = sourceKey;
-                    prev.sourceUrl = target;
-                    prev.updatedAt = now;
-                    if (prev.enabled === false) {
-                        // keep user disabled preference
-                    }
-                    updated += 1;
-                } else {
-                    existing.push(node);
-                    byRaw.set(node.raw, node);
-                    added += 1;
-                    if (samples.length < 5) samples.push(node.name);
-                }
-            }
-            // count raws already present and unchanged as skipped when no update needed?
-            skipped = Math.max(0, candidates.length - added - updated);
         }
-
-        const saved = await this.nodeStorage.replace(existing, snapshot.revision);
-        const nodes = saved.nodes;
-        const format = fetched.format || 'unknown';
-        const message = buildMessage({ mode, added, updated, removed, skipped, format, totalCandidates: candidates.length });
-
-        return {
-            mode,
-            added,
-            updated,
-            removed,
-            skipped,
-            parsed: candidates.length,
-            total: nodes.length,
-            format,
-            source: target,
-            sourceKey,
-            samples,
-            nodes,
-            revision: saved.revision,
-            message
-        };
+        skipped = Math.max(0, candidates.length - added - updated);
     }
+
+    return { nodes: existing, added, updated, removed, skipped, samples };
 }
 
 function belongsToSource(node, sourceKey, targetUrl) {

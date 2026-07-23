@@ -438,7 +438,12 @@ export const NodeLibrary = (props) => {
               body: JSON.stringify({ url, mode })
             });
             const data = await res.json().catch(() => ({}));
-            if (!res.ok) throw new Error(data.error || ('导入失败 ' + res.status));
+            if (!res.ok) {
+              if (res.status === 409) {
+                await this.loadFromServer();
+              }
+              throw new Error(data.error || ('导入失败 ' + res.status));
+            }
             if (Array.isArray(data.nodes)) {
               this.suppressSync = true;
               this.nodes = data.nodes;

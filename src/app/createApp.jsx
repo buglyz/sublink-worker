@@ -32,14 +32,16 @@ export function createApp(bindings = {}) {
     const runtime = normalizeRuntime(bindings);
     const env = bindings.env || bindings.processEnv || {};
     const authPassword = bindings.authPassword || env.AUTH_PASSWORD || env.SUBLINK_PASSWORD || '';
+    // Prefer explicit binding; fall back to normalized runtime (after createApp(normalizeRuntime(...))).
+    const storageCoordinator = bindings.storageCoordinator ?? runtime.storageCoordinator ?? null;
     const services = {
         shortLinks: runtime.kv ? new ShortLinkService(runtime.kv, { shortLinkTtlSeconds: runtime.config.shortLinkTtlSeconds }) : null,
         configStorage: runtime.kv ? new ConfigStorageService(runtime.kv, { configTtlSeconds: runtime.config.configTtlSeconds }) : null,
         auth: new AuthService(runtime.kv, { password: authPassword }),
-        nodes: runtime.kv ? new NodeStorageService(runtime.kv, bindings.storageCoordinator || runtime.storageCoordinator) : null,
+        nodes: runtime.kv ? new NodeStorageService(runtime.kv, storageCoordinator) : null,
         exportToken: runtime.kv ? new ExportTokenService(runtime.kv) : null,
-        nodeImport: runtime.kv ? new NodeImportService(new NodeStorageService(runtime.kv, bindings.storageCoordinator || runtime.storageCoordinator)) : null,
-        subscriptions: runtime.kv ? new SubscriptionStorageService(runtime.kv, bindings.storageCoordinator || runtime.storageCoordinator) : null
+        nodeImport: runtime.kv ? new NodeImportService(new NodeStorageService(runtime.kv, storageCoordinator)) : null,
+        subscriptions: runtime.kv ? new SubscriptionStorageService(runtime.kv, storageCoordinator) : null
     };
 
     const app = new Hono();
