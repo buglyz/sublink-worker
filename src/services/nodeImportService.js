@@ -119,7 +119,10 @@ export class NodeImportService {
 }
 
 function applyImport(existingNodes, candidates, { mode, sourceKey, target, now }) {
-    let existing = Array.isArray(existingNodes) ? existingNodes.slice() : [];
+    // Shallow-clone each node so merge updates never mutate DO/KV snapshot caches.
+    let existing = Array.isArray(existingNodes)
+        ? existingNodes.map((n) => (n && typeof n === 'object' ? { ...n } : n))
+        : [];
     let removed = 0;
     let added = 0;
     let updated = 0;
@@ -137,7 +140,7 @@ function applyImport(existingNodes, candidates, { mode, sourceKey, target, now }
                 skipped += 1;
                 continue;
             }
-            existing.push(node);
+            existing.push({ ...node });
             existingRaws.add(node.raw);
             added += 1;
             if (samples.length < 5) samples.push(node.name);
@@ -153,10 +156,12 @@ function applyImport(existingNodes, candidates, { mode, sourceKey, target, now }
                 prev.source = sourceKey;
                 prev.sourceUrl = target;
                 prev.updatedAt = now;
+                // Preserve user disabled preference (do not force enabled=true).
                 updated += 1;
             } else {
-                existing.push(node);
-                byRaw.set(node.raw, node);
+                const next = { ...node };
+                existing.push(next);
+                byRaw.set(node.raw, next);
                 added += 1;
                 if (samples.length < 5) samples.push(node.name);
             }

@@ -22,7 +22,13 @@ export class NodeStorageService {
 
     async getSnapshot() {
         if (this.coordinator) {
-            return this.coordinator.getNodes();
+            const snapshot = await this.coordinator.getNodes();
+            return {
+                nodes: Array.isArray(snapshot?.nodes)
+                    ? snapshot.nodes.map((n) => (n && typeof n === 'object' ? { ...n } : n))
+                    : [],
+                revision: Number(snapshot?.revision) || 0
+            };
         }
         const kv = this.ensureKv();
         const raw = await kv.get(NODES_KEY);

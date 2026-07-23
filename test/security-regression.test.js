@@ -199,6 +199,40 @@ describe('security regressions', () => {
         expect(second.slug).not.toBe('taken-slug');
     });
 
+    it('does not mutate coordinator snapshot objects during merge import', async () => {
+        const shared = {
+            id: 'shared',
+            raw: testNode,
+            name: 'old',
+            protocol: 'ss',
+            enabled: true,
+            tag: 'old-tag'
+        };
+        let revision = 3;
+        const coordinator = {
+            async getNodes() {
+                return { nodes: [shared], revision };
+            },
+            async replaceNodes(nodes, expected) {
+                if (expected !== revision) {
+                    return { ok: false, status: 409, error: 'conflict' };
+                }
+                revision += 1;
+                return { ok: true, nodes, revision };
+            }
+        };
+        const storage = new NodeStorageService(new MemoryKVAdapter(), coordinator);
+        const importer = new NodeImportService(storage);
+        vi.stubGlobal('fetch', vi.fn(async () => new Response(testNode + '\n', { status: 200 })));
+        await importer.importFromUrl('https://example.com/sub', { mode: 'merge', tag: 'new-tag' });
+        vi.unstubAllGlobals();
+
+        // Original object held by coordinator must stay untouched.
+        expect(shared.name).toBe('old');
+        expect(shared.tag).toBe('old-tag');
+        expect(shared.source).toBeUndefined();
+    });
+
     it('blocks private remote targets and oversized response bodies', async () => {
         await expect(fetchRemoteText('http://127.0.0.1/private')).rejects.toThrow('不允许访问本地或私有网络地址');
         await expect(fetchRemoteText('http://[::1]/private')).rejects.toThrow('不允许访问本地或私有网络地址');
