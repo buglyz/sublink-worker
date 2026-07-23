@@ -62,9 +62,9 @@
 | 键 / 前缀 | 用途 |
 |-----------|------|
 | 会话 token | 管理员登录 session（依赖 `AUTH_PASSWORD`） |
-| `nodes:main` / `subscriptions:main` | 旧版 KV 数据；首次访问时迁移到 Durable Object |
+| `nodes:main` / `subscriptions:main` | 旧版 KV 快照；Cloudflare 首次访问时迁入 Durable Object，迁后运行时以 DO 为准（KV 键保留便于回滚） |
 | `export:token:main` | 全库导出 token 及生成偏好（模板 / 规则） |
-| Durable Object SQLite | 节点库与订阅管理的强一致写入和版本冲突检测 |
+| Durable Object storage | 节点库与订阅管理的串行写入与 revision 冲突检测（`new_sqlite_classes` 后端；文档型 put/get，非业务 SQL 表） |
 | `shortlink:*` / `config:*` | 公开短链与 base config，和内部数据隔离 |
 | 短链 / base config | 上游 sublink 原有能力 |
 

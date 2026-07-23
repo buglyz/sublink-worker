@@ -59,7 +59,8 @@ function isRedirect(status) {
 function isPrivateHostname(hostname) {
     const host = String(hostname || '').replace(/^\[|\]$/g, '').replace(/\.$/, '').toLowerCase();
     if (!host || host === 'localhost' || host.endsWith('.localhost')) return true;
-    if (host === '::1' || host.startsWith('fe80:') || host.startsWith('fc') || host.startsWith('fd')) return true;
+    // IPv6 loopback / link-local / ULA only — do not treat domain labels like "fd-example.com" as private.
+    if (host === '::1' || host.startsWith('fe80:') || /^f[cd][0-9a-f]{0,2}:/i.test(host)) return true;
     if (host.startsWith('::ffff:')) return isPrivateIpv4(host.slice(7));
     return isPrivateIpv4(host);
 }

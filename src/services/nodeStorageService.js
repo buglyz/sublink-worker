@@ -49,7 +49,8 @@ export class NodeStorageService {
         const current = await this.getSnapshot();
         assertRevision(current.revision, expectedRevision);
         const kv = this.ensureKv();
-        const revision = Date.now();
+        // Monotonic even when Date.now() stalls within the same millisecond.
+        const revision = Math.max(Number(current.revision) + 1, Date.now());
         const payload = JSON.stringify({
             updatedAt: revision,
             nodes: normalized
@@ -64,15 +65,10 @@ export class NodeStorageService {
     }
 
     async clear(expectedRevision) {
-        if (this.coordinator) {
-            const result = await this.coordinator.clearNodes(normalizeRevision(expectedRevision));
-            return unwrapCoordinatorResult(result);
-        }
-        const current = await this.getSnapshot();
-        assertRevision(current.revision, expectedRevision);
-        const kv = this.ensureKv();
-        await kv.delete(NODES_KEY);
-        return { nodes: [], revision: Date.now() };
+        // Keep an empty snapshot key so revision stays readable after clear.
+        // Deleting the key would make getSnapshot() report revision 0 while the
+        // client still holds a non-zero revision and every later write 409s.
+        return this.replace([], expectedRevision);
     }
 }
 

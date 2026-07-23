@@ -321,6 +321,10 @@ export const NodeLibrary = (props) => {
             }
             if (!res.ok) {
               const data = await res.json().catch(() => ({}));
+              if (res.status === 409) {
+                await this.loadFromServer();
+                throw new Error(data.error || '节点库已在其他设备更新，请刷新后重试');
+              }
               throw new Error(data.error || ('同步失败 ' + res.status));
             }
             const data = await res.json().catch(() => ({}));

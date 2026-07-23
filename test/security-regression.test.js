@@ -91,11 +91,44 @@ describe('security regressions', () => {
         expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
     });
 
+    it('keeps node revision usable after clear on pure KV storage', async () => {
+        const kv = new MemoryKVAdapter();
+        const storage = new NodeStorageService(kv);
+        const first = await storage.replace([{ raw: testNode }], 0);
+        expect(first.nodes).toHaveLength(1);
+        expect(first.revision).toBeGreaterThan(0);
+
+        const cleared = await storage.clear(first.revision);
+        expect(cleared.nodes).toEqual([]);
+        expect(cleared.revision).toBeGreaterThan(first.revision);
+
+        const snapshot = await storage.getSnapshot();
+        expect(snapshot.revision).toBe(cleared.revision);
+
+        const restored = await storage.replace([{ raw: testNode }], cleared.revision);
+        expect(restored.nodes).toHaveLength(1);
+        expect(restored.revision).toBeGreaterThan(cleared.revision);
+    });
+
     it('blocks private remote targets and oversized response bodies', async () => {
         await expect(fetchRemoteText('http://127.0.0.1/private')).rejects.toThrow('不允许访问本地或私有网络地址');
+        await expect(fetchRemoteText('http://[::1]/private')).rejects.toThrow('不允许访问本地或私有网络地址');
+        await expect(fetchRemoteText('http://[fd12::1]/private')).rejects.toThrow('不允许访问本地或私有网络地址');
 
-        const fetchMock = vi.fn(async () => new Response('1234'));
+        // Domain labels that merely start with fd/fc must not be treated as private IPv6.
+        const fetchMock = vi.fn(async (input) => {
+            const url = String(input);
+            if (url.includes('fd-example.com')) {
+                return new Response('ss://YWVzLTEyOC1nY206cGFzc3dvcmQ=@example.com:443#ok', {
+                    status: 200,
+                    headers: { 'content-type': 'text/plain' }
+                });
+            }
+            return new Response('1234', { status: 200 });
+        });
         vi.stubGlobal('fetch', fetchMock);
+        const allowed = await fetchRemoteText('https://fd-example.com/sub');
+        expect(allowed.text).toContain('ss://');
         await expect(fetchRemoteText('https://example.com/sub', { maxBytes: 3 })).rejects.toThrow('too large');
         vi.unstubAllGlobals();
     });

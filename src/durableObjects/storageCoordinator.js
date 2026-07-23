@@ -106,14 +106,26 @@ export class StorageCoordinator extends DurableObject {
     }
 
     async ensureLegacyMigration() {
+        if (await this.ctx.storage.get(MIGRATION_KEY)) return;
         if (!this.legacyMigration) {
-            this.legacyMigration = this.migrateLegacyKv();
+            // Reset the in-flight promise on failure so the next request can retry.
+            this.legacyMigration = this.migrateLegacyKv().catch((error) => {
+                this.legacyMigration = null;
+                throw error;
+            });
         }
         await this.legacyMigration;
     }
 
     async migrateLegacyKv() {
         if (await this.ctx.storage.get(MIGRATION_KEY)) return;
+        if (!this.env?.SUBLINK_KV) {
+            // Fresh DO without KV binding: start empty rather than hanging forever.
+            await this.ctx.storage.put(NODES_STATE_KEY, { nodes: [], revision: 0 });
+            await this.ctx.storage.put(SUBSCRIPTIONS_STATE_KEY, []);
+            await this.ctx.storage.put(MIGRATION_KEY, true);
+            return;
+        }
         const [nodesRaw, subscriptionsRaw] = await Promise.all([
             this.env.SUBLINK_KV.get('nodes:main'),
             this.env.SUBLINK_KV.get('subscriptions:main')
@@ -123,6 +135,8 @@ export class StorageCoordinator extends DurableObject {
         await this.ctx.storage.put(NODES_STATE_KEY, nodes);
         await this.ctx.storage.put(SUBSCRIPTIONS_STATE_KEY, subscriptions);
         await this.ctx.storage.put(MIGRATION_KEY, true);
+        // Keep legacy KV keys as a one-time source of truth snapshot for rollback;
+        // runtime reads after migration always use DO storage.
     }
 
     async readNodes() {

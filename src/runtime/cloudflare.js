@@ -8,8 +8,18 @@ export function createCloudflareRuntime(env) {
         config: {},
         env: env || {},
         authPassword: env?.AUTH_PASSWORD || env?.SUBLINK_PASSWORD || '',
-        storageCoordinator: env?.SUBLINK_STORAGE_COORDINATOR
-            ? env.SUBLINK_STORAGE_COORDINATOR.getByName('primary')
-            : null
+        storageCoordinator: getStorageCoordinatorStub(env?.SUBLINK_STORAGE_COORDINATOR)
     };
+}
+
+/** Prefer getByName when available; fall back to classic idFromName + get. */
+function getStorageCoordinatorStub(binding) {
+    if (!binding) return null;
+    if (typeof binding.getByName === 'function') {
+        return binding.getByName('primary');
+    }
+    if (typeof binding.idFromName === 'function' && typeof binding.get === 'function') {
+        return binding.get(binding.idFromName('primary'));
+    }
+    return null;
 }
