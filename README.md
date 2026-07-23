@@ -82,7 +82,11 @@
 - 支持粘贴分享链接（`ss` / `vmess` / `vless` / `trojan` 等）入库
 - 支持远程订阅 URL 拉取；服务端将 Clash、Sing-box 或 URI 列表解析为独立节点
 - 同一远程订阅支持「更新替换」与「合并追加」，并记录来源与导入结果
-- 支持启用状态、搜索、批量选择及 KV 同步
+- 支持启用状态、搜索、批量选择及跨端同步
+- **写入语义（重要）**
+  - Cloudflare Workers：节点库 / 订阅管理走 Durable Object 串行写 + `revision` 乐观锁；双端同时改库时落后一方收到 **409**，前端会重新拉取对齐
+  - Node / Redis / 内存 KV（无 DO）：同样使用 `revision` 乐观锁；远程导入在 409 时最多重试 3 次。普通 `PUT /api/nodes` 仍是「读-改-写」，极端并发下后写可能覆盖先写，多端编辑请先刷新或接受 409 后重试
+  - 清空节点不会删掉 revision 快照键；清空后可继续用返回的 `revision` 再写入
 
 ### 3. 生成订阅
 
@@ -113,9 +117,18 @@
 
 ### 6. 部署
 
-- 目标运行时：Cloudflare Workers，绑定 `SUBLINK_KV` 与 `SUBLINK_STORAGE_COORDINATOR`
+- 目标运行时：Cloudflare Workers，绑定 `SUBLINK_KV` 与 `SUBLINK_STORAGE_COORDINATOR`（Durable Object）
 - 可通过 GitHub Actions 在 `main` 分支推送时自动部署
 - 所需密钥示例：`AUTH_PASSWORD`、`CLOUDFLARE_API_TOKEN`、`CF_ACCOUNT_ID`
+- 部署成功后 Worker 绑定应包含：`SUBLINK_KV` + `SUBLINK_STORAGE_COORDINATOR`；登录后访问 `/api/nodes` 应返回 `{ nodes, revision }`
+
+### 7. 运行时差异（并发）
+
+| 运行时 | 节点/订阅一致性 | 说明 |
+|--------|-----------------|------|
+| Cloudflare Workers + DO | 串行写 + revision | 推荐；冲突返回 409 |
+| Node + Redis / 内存 KV | 仅 revision 乐观锁 | 导入路径会自动重试 409；双端直接 PUT 仍可能后写覆盖 |
+| Vercel + KV REST | 同无 DO | 同上 |
 
 ---
 
