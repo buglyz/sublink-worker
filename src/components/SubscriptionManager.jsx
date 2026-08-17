@@ -246,7 +246,7 @@ export const SubscriptionManager = () => {
             const winW = window.innerWidth;
             const menuW = 176; // w-44
             const left = Math.min(r.left, winW - menuW - 8);
-            this.menuStyle = `left:${Math.max(8, left)}px;top:${r.bottom + 6}px;`;
+            this.menuStyle = 'left:' + Math.max(8, left) + 'px;top:' + (r.bottom + 6) + 'px;';
           }
           this.menuItem = item;
           this.menuOpen = true;
