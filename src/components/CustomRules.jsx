@@ -7,22 +7,22 @@ export const CustomRules = (props) => {
   return (
     <div x-data="customRulesData()" class="space-y-4">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <p class="mm-desc">{t('customRulesSectionTooltip')}</p>
-        <div class="mm-tab-bar">
+        <p class="text-xs text-[var(--muted-foreground)]">{t('customRulesSectionTooltip')}</p>
+        <div class="inline-flex bg-[var(--secondary)] p-1 rounded-lg border border-[var(--border)] self-start sm:self-auto">
           <button
             type="button"
-            class="mm-tab"
+            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all"
             x-on:click={'mode = "form"'}
-            x-bind:class={'mode === "form" ? "is-active" : ""'}
+            x-bind:class={'mode === "form" ? "bg-[var(--card)] text-[var(--primary)] shadow-xs font-semibold" : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"'}
           >
             <i class="fas fa-list text-[10px]"></i>
             {t('customRulesForm')}
           </button>
           <button
             type="button"
-            class="mm-tab"
+            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all"
             x-on:click={'mode = "json"'}
-            x-bind:class={'mode === "json" ? "is-active" : ""'}
+            x-bind:class={'mode === "json" ? "bg-[var(--card)] text-[var(--primary)] shadow-xs font-semibold" : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"'}
           >
             <i class="fas fa-code text-[10px]"></i>
             {t('customRulesJSON')}
@@ -32,10 +32,10 @@ export const CustomRules = (props) => {
 
       <div x-show={'mode === "form"'}>
         <template x-if="rules.length === 0">
-          <div class="rounded-[var(--radius)] border border-dashed border-[var(--border)] bg-[color-mix(in_srgb,var(--muted)_40%,transparent)] px-4 py-10 text-center">
-            <p class="mm-desc mb-4">{t('noCustomRulesForm')}</p>
-            <button type="button" class="mm-btn mm-btn-primary" x-on:click="addRule()">
-              <i class="fas fa-plus text-xs"></i>
+          <div class="rounded-xl border border-dashed border-[var(--border)] bg-[var(--secondary)]/40 px-4 py-8 text-center">
+            <p class="text-xs text-[var(--muted-foreground)] mb-3">{t('noCustomRulesForm')}</p>
+            <button type="button" class="mm-btn mm-btn-primary mm-btn-sm" x-on:click="addRule()">
+              <i class="fas fa-plus text-[10px]"></i>
               {t('addCustomRule')}
             </button>
           </div>
@@ -43,61 +43,61 @@ export const CustomRules = (props) => {
 
         <div class="space-y-3">
           <template x-for="(rule, index) in rules" x-bind:key="index">
-            <div class="rounded-[var(--radius)] border border-[var(--border)] bg-[color-mix(in_srgb,var(--muted)_25%,transparent)] p-3.5">
-              <div class="mb-3 flex items-center justify-between border-b border-[var(--border)] pb-2.5">
-                <div class="flex items-center gap-2 text-sm font-medium">
-                  <span class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-[color-mix(in_srgb,var(--primary)_14%,transparent)] font-mono text-xs text-[var(--primary)]" x-text="index + 1"></span>
+            <div class="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 shadow-xs space-y-3">
+              <div class="flex items-center justify-between border-b border-[var(--border)] pb-2.5">
+                <div class="flex items-center gap-2 text-xs font-semibold text-[var(--foreground)]">
+                  <span class="inline-flex h-5 w-5 items-center justify-center rounded bg-[var(--primary-light)] font-mono text-[11px] text-[var(--primary)] font-bold" x-text="index + 1"></span>
                   {t('customRule')}
                 </div>
-                <button type="button" class="mm-btn mm-btn-danger mm-btn-icon" x-on:click="removeRule(index)">
+                <button type="button" class="h-7 w-7 inline-flex items-center justify-center rounded-lg text-[var(--muted-foreground)] hover:text-red-500 hover:bg-red-500/10 transition-colors" x-on:click="removeRule(index)">
                   <i class="fas fa-trash-alt text-xs"></i>
                 </button>
               </div>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div class="md:col-span-2">
                   <label class="mm-label">{t('customRuleOutboundName')}</label>
-                  <input type="text" x-model="rule.name" class="mm-input" placeholder="e.g., MyRule" />
+                  <input type="text" x-model="rule.name" class="mm-input text-xs" placeholder="e.g., MyRule" />
                 </div>
                 <div>
                   <label class="mm-label">{t('customRuleDomainSuffix')}</label>
-                  <input type="text" x-model="rule.domain_suffix" class="mm-input" placeholder={t('customRuleDomainSuffixPlaceholder')} />
+                  <input type="text" x-model="rule.domain_suffix" class="mm-input text-xs" placeholder={t('customRuleDomainSuffixPlaceholder')} />
                 </div>
                 <div>
                   <label class="mm-label">{t('customRuleDomainKeyword')}</label>
-                  <input type="text" x-model="rule.domain_keyword" class="mm-input" placeholder={t('customRuleDomainKeywordPlaceholder')} />
+                  <input type="text" x-model="rule.domain_keyword" class="mm-input text-xs" placeholder={t('customRuleDomainKeywordPlaceholder')} />
                 </div>
                 <div>
                   <label class="mm-label">{t('customRuleSrcIPCIDR')}</label>
-                  <input type="text" x-model="rule.src_ip_cidr" class="mm-input" placeholder={t('customRuleSrcIPCIDRPlaceholder')} />
+                  <input type="text" x-model="rule.src_ip_cidr" class="mm-input text-xs font-mono" placeholder={t('customRuleSrcIPCIDRPlaceholder')} />
                 </div>
                 <div>
                   <label class="mm-label">{t('customRuleIPCIDR')}</label>
-                  <input type="text" x-model="rule.ip_cidr" class="mm-input" placeholder={t('customRuleIPCIDRPlaceholder')} />
+                  <input type="text" x-model="rule.ip_cidr" class="mm-input text-xs font-mono" placeholder={t('customRuleIPCIDRPlaceholder')} />
                 </div>
                 <div>
                   <label class="mm-label">{t('customRuleProtocol')}</label>
-                  <input type="text" x-model="rule.protocol" class="mm-input" placeholder={t('customRuleProtocolPlaceholder')} />
+                  <input type="text" x-model="rule.protocol" class="mm-input text-xs" placeholder={t('customRuleProtocolPlaceholder')} />
                 </div>
                 <div>
                   <label class="mm-label">{t('customRuleGeoSite')}</label>
-                  <input type="text" x-model="rule.site" class="mm-input" placeholder={t('customRuleGeoSitePlaceholder')} />
+                  <input type="text" x-model="rule.site" class="mm-input text-xs" placeholder={t('customRuleGeoSitePlaceholder')} />
                 </div>
                 <div>
                   <label class="mm-label">{t('customRuleGeoIP')}</label>
-                  <input type="text" x-model="rule.ip" class="mm-input" placeholder={t('customRuleGeoIPPlaceholder')} />
+                  <input type="text" x-model="rule.ip" class="mm-input text-xs" placeholder={t('customRuleGeoIPPlaceholder')} />
                 </div>
               </div>
             </div>
           </template>
         </div>
 
-        <div class="mt-3 flex flex-wrap gap-2">
-          <button type="button" class="mm-btn mm-btn-secondary" x-on:click="addRule()">
-            <i class="fas fa-plus text-xs"></i>
+        <div class="mt-3 flex flex-wrap gap-2" x-show="rules.length > 0">
+          <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-on:click="addRule()">
+            <i class="fas fa-plus text-[10px]"></i>
             {t('addCustomRule')}
           </button>
-          <button type="button" class="mm-btn mm-btn-danger" x-show="rules.length > 0" x-on:click="clearAll()">
-            <i class="fas fa-trash text-xs"></i>
+          <button type="button" class="mm-btn mm-btn-danger mm-btn-sm" x-on:click="clearAll()">
+            <i class="fas fa-trash text-[10px]"></i>
             {t('clearAll')}
           </button>
         </div>
@@ -107,29 +107,29 @@ export const CustomRules = (props) => {
         <div class="flex justify-end gap-1.5">
           <button
             type="button"
-            class="mm-btn mm-btn-ghost text-xs"
+            class="mm-btn mm-btn-outline mm-btn-sm text-xs"
             x-on:click="navigator.clipboard.readText().then(text => jsonContent = text).catch(() => {})"
           >
-            <i class="fas fa-paste"></i>
+            <i class="fas fa-paste text-[10px]"></i>
             {t('paste')}
           </button>
-          <button type="button" class="mm-btn mm-btn-ghost text-xs" x-on:click={'jsonContent = "[]"'}>
-            <i class="fas fa-times"></i>
+          <button type="button" class="mm-btn mm-btn-outline mm-btn-sm text-xs" x-on:click={'jsonContent = "[]"'}>
+            <i class="fas fa-times text-[10px]"></i>
             {t('clear')}
           </button>
         </div>
         <textarea
           id="customRulesJson"
           x-model="jsonContent"
-          class="mm-textarea font-mono text-[13px] min-h-[16rem]"
+          class="mm-textarea font-mono text-xs min-h-[14rem]"
           placeholder='[{"name":"MyRule","domain_suffix":"example.com"}]'
         ></textarea>
         <div class="flex flex-wrap items-center justify-between gap-2">
           <div class="text-xs">
-            <span class="text-red-500" x-show="jsonError" x-text="jsonError"></span>
-            <span class="text-emerald-600" x-show="jsonValid">{t('allJSONValid')}</span>
+            <span class="text-red-500 font-medium" x-show="jsonError" x-text="jsonError"></span>
+            <span class="text-emerald-500 font-medium" x-show="jsonValid">{t('allJSONValid')}</span>
           </div>
-          <button type="button" class="mm-btn mm-btn-secondary text-sm" x-on:click="validateJson()">
+          <button type="button" class="mm-btn mm-btn-secondary mm-btn-sm" x-on:click="validateJson()">
             {t('validateJSON')}
           </button>
         </div>
@@ -211,3 +211,4 @@ export const CustomRules = (props) => {
     </div>
   );
 };
+

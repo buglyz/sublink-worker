@@ -10,53 +10,62 @@ export const AuthGate = () => {
     <div
       x-cloak
       x-show={'$store.auth.ready && $store.auth.authRequired && !$store.auth.authenticated'}
-      class="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-[color-mix(in_srgb,var(--background)_72%,#000)] backdrop-blur-md"
+      class="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md transition-opacity duration-200"
       role="dialog"
       aria-modal="true"
       aria-label="登录"
     >
-      <div class="w-full max-w-md pixel-card mm-card shadow-[8px_8px_0_rgba(0,0,0,0.18)]">
-        <div class="card-header border-b border-[var(--border)] pb-4 text-center">
-          <div class="mx-auto mb-3 flex h-14 w-14 items-center justify-center border-2 border-[color:rgba(241,140,110,0.45)] shadow-[4px_4px_0_rgba(0,0,0,0.15)] bg-[var(--background)]">
-            <img src="/logo.svg" alt="" class="h-10 w-10 object-cover" width="40" height="40" />
+      <div class="w-full max-w-sm rounded-2xl border border-[var(--border)] bg-[var(--card)] text-[var(--card-foreground)] shadow-2xl overflow-hidden p-6 space-y-5">
+        <div class="text-center space-y-2">
+          <div class="mx-auto flex h-13 w-13 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--secondary)] shadow-xs p-2.5">
+            <img src="/logo.svg" alt="" class="h-full w-full object-contain" width="40" height="40" />
           </div>
-          <div class="card-title text-xl">Sublink Worker</div>
-          <div class="card-desc mt-1">需要登录后才能使用节点库与订阅生成</div>
-        </div>
-        <div class="card-content pt-5 space-y-4">
           <div>
-            <label class="mm-label" for="gate-password">管理密码</label>
-            <input
-              id="gate-password"
-              type="password"
-              class="mm-input"
-              placeholder="AUTH_PASSWORD"
-              autocomplete="current-password"
-              x-model="$store.auth.password"
-              {...{
-                'x-on:keydown.enter.prevent': '$store.auth.login()',
-                'x-init': "$nextTick(() => { try { $el.focus(); } catch(e){} })"
-              }}
-            />
+            <h2 class="text-lg font-bold tracking-tight text-[var(--foreground)]">Sublink Worker</h2>
+            <p class="text-xs text-[var(--muted-foreground)] mt-0.5">请验证管理密码后进入系统</p>
           </div>
-          <p class="text-sm text-red-500" x-show="$store.auth.error" x-text="$store.auth.error"></p>
-          <p class="text-xs text-amber-700 dark:text-amber-400" x-show={'!$store.auth.kvReady'}>
-            警告：未检测到 KV，登录后可能无法持久化节点。
-          </p>
+        </div>
+
+        <div class="space-y-3.5">
+          <div class="space-y-1.5">
+            <label class="block text-xs font-medium text-[var(--foreground)]" for="gate-password">管理密码</label>
+            <div class="relative">
+              <input
+                id="gate-password"
+                type="password"
+                class="w-full rounded-lg border border-[var(--input)] bg-[var(--card)] px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--ring)] focus:outline-none transition-all"
+                placeholder="请输入 AUTH_PASSWORD"
+                autocomplete="current-password"
+                x-model="$store.auth.password"
+                {...{
+                  'x-on:keydown.enter.prevent': '$store.auth.login()',
+                  'x-init': "$nextTick(() => { try { $el.focus(); } catch(e){} })"
+                }}
+              />
+            </div>
+          </div>
+
+          <p class="text-xs text-red-500 font-medium" x-show="$store.auth.error" x-text="$store.auth.error"></p>
+          <div class="rounded-lg bg-amber-500/10 border border-amber-500/20 p-2 text-xs text-amber-600 dark:text-amber-400" x-show={'!$store.auth.kvReady'}>
+            <i class="fas fa-triangle-exclamation mr-1"></i> 未检测到 KV 存储，数据可能无法持久化保存。
+          </div>
+
           <button
             type="button"
-            class="mm-btn mm-btn-primary w-full"
+            class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white font-medium py-2.5 text-sm shadow-xs transition-all active:scale-[0.98] disabled:opacity-50"
             x-on:click="$store.auth.login()"
             x-bind:disabled="$store.auth.loading"
           >
-            <i class="fas" x-bind:class={'$store.auth.loading ? "fa-spinner fa-spin" : "fa-right-to-bracket"'}></i>
-            <span x-text={'$store.auth.loading ? "登录中…" : "进入系统"'}></span>
+            <i class="fas" x-bind:class={'$store.auth.loading ? "fa-spinner fa-spin" : "fa-right-to-bracket text-xs"'}></i>
+            <span x-text={'$store.auth.loading ? "验证中…" : "进入系统"'}></span>
           </button>
-          <p class="text-[11px] text-muted text-center leading-relaxed">
-            密码由服务端环境变量 AUTH_PASSWORD 配置（Cloudflare Secret / .env）
+
+          <p class="text-[11px] text-[var(--muted-foreground)] text-center leading-relaxed">
+            密码由环境变量 <code class="font-mono bg-[var(--secondary)] px-1 py-0.5 rounded text-[10px]">AUTH_PASSWORD</code> 配置
           </p>
         </div>
       </div>
     </div>
   );
 };
+

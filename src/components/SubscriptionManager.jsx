@@ -285,159 +285,190 @@ export const SubscriptionManager = () => {
 
   return (
     <div x-data="subscriptionManagerData()" x-init="init()" class="space-y-4">
+      {/* Page Header */}
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 class="text-3xl font-semibold tracking-tight">订阅管理</h1>
-          <p class="text-muted mt-1">创建可编辑的 Clash 订阅：选择节点、模板/规则，生成固定链接并持久化保存</p>
+          <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--foreground)]">订阅管理</h1>
+          <p class="text-xs sm:text-sm text-[var(--muted-foreground)] mt-1">创建可自定义节点的固定 Clash / Surge 订阅，生成永久短链并持久化保存</p>
         </div>
         <div class="flex flex-wrap gap-2">
-          <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-on:click="reload()" x-bind:disabled="loading">
+          <button type="button" class="mm-btn mm-btn-outline mm-btn-sm text-xs" x-on:click="reload()" x-bind:disabled="loading">
             <i class="fas" x-bind:class={'loading ? "fa-spinner fa-spin" : "fa-rotate"'}></i> 刷新
           </button>
-          <button type="button" class="mm-btn mm-btn-primary mm-btn-sm" x-on:click="startCreate()">
-            <i class="fas fa-plus text-xs"></i> 创建订阅
+          <button type="button" class="mm-btn mm-btn-primary mm-btn-sm text-xs" x-on:click="startCreate()">
+            <i class="fas fa-plus text-[10px]"></i> 创建订阅
           </button>
         </div>
       </div>
 
-      <p class="text-sm text-[var(--primary)]" x-show="flash" x-text="flash"></p>
-      <p class="text-sm text-red-500" x-show="error" x-text="error"></p>
+      <p class="text-xs text-[var(--primary)] font-medium" x-show="flash" x-text="flash"></p>
+      <p class="text-xs text-red-500 font-medium" x-show="error" x-text="error"></p>
 
-      {/* Editor */}
-      <div class="pixel-card mm-card" x-show="editing" x-cloak>
-        <div class="card-header border-b border-[var(--border)] pb-4">
-          <div class="card-title text-base" x-text={'editing && editing.id ? "编辑订阅" : "创建订阅"'}></div>
-          <div class="card-desc">勾选节点库节点；保存后得到可长期使用的 Clash 订阅链接</div>
+      {/* Editor Drawer/Card */}
+      <div class="rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-sm overflow-hidden" x-show="editing" x-cloak>
+        <div class="border-b border-[var(--border)] px-5 py-4 bg-[var(--secondary)]/30">
+          <div class="font-semibold text-sm text-[var(--foreground)] flex items-center gap-2">
+            <i class="fas fa-pen-to-square text-[var(--primary)] text-xs"></i>
+            <span x-text={'editing && editing.id ? "编辑订阅" : "创建新订阅"'}></span>
+          </div>
+          <div class="text-xs text-[var(--muted-foreground)] mt-0.5">勾选节点库中的节点；保存后可得到长期稳定的订阅链接</div>
         </div>
-        <div class="card-content pt-4 space-y-4" x-show="editing">
+        <div class="p-5 space-y-4" x-show="editing">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label class="mm-label">名称 *</label>
-              <input type="text" class="mm-input" x-model="editing.name" placeholder="例如：主力订阅" />
+              <input type="text" class="mm-input text-xs" x-model="editing.name" placeholder="例如：主力订阅" />
             </div>
             <div>
               <label class="mm-label">短链 slug（可选）</label>
-              <input type="text" class="mm-input font-mono text-xs" x-model="editing.slug" placeholder="自动生成" />
+              <input type="text" class="mm-input font-mono text-xs" x-model="editing.slug" placeholder="留空自动生成" />
             </div>
             <div class="md:col-span-2">
-              <label class="mm-label">备注</label>
-              <input type="text" class="mm-input" x-model="editing.description" placeholder="可选说明" />
+              <label class="mm-label">备注说明</label>
+              <input type="text" class="mm-input text-xs" x-model="editing.description" placeholder="可选订阅说明" />
             </div>
           </div>
 
-          <div class="space-y-2">
-            <label class="mm-label">规则模式</label>
-            <div class="flex gap-2">
-              <button type="button" class="mm-btn flex-1" x-on:click={'editing.mode = "custom"'} x-bind:class={'editing.mode === "custom" ? "mm-btn-primary" : "mm-btn-outline"'}>自定义规则</button>
-              <button type="button" class="mm-btn flex-1" x-on:click={'editing.mode = "template"'} x-bind:class={'editing.mode === "template" ? "mm-btn-primary" : "mm-btn-outline"'}>使用模板</button>
+          <div class="space-y-2 pt-2 border-t border-[var(--border)]">
+            <label class="mm-label">规则体系模式</label>
+            <div class="inline-flex bg-[var(--secondary)] p-1 rounded-lg border border-[var(--border)]">
+              <button
+                type="button"
+                class="px-3 py-1 rounded-md text-xs font-medium transition-all"
+                x-on:click={'editing.mode = "custom"'}
+                x-bind:class={'editing.mode === "custom" ? "bg-[var(--card)] text-[var(--primary)] shadow-xs font-semibold" : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"'}
+              >
+                自定义规则
+              </button>
+              <button
+                type="button"
+                class="px-3 py-1 rounded-md text-xs font-medium transition-all"
+                x-on:click={'editing.mode = "template"'}
+                x-bind:class={'editing.mode === "template" ? "bg-[var(--card)] text-[var(--primary)] shadow-xs font-semibold" : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"'}
+              >
+                使用模板
+              </button>
             </div>
           </div>
 
-          <div x-show={'editing.mode === "custom"'} class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <label class="mm-label sm:col-span-3">规则预设</label>
-            <select class="mm-select" x-model="editing.selectedRules">
-              <option value="minimal">minimal</option>
-              <option value="balanced">balanced</option>
-              <option value="comprehensive">comprehensive</option>
-            </select>
-            <label class="inline-flex items-center gap-2 border-2 border-[var(--border)] px-3 py-2 cursor-pointer">
-              <input type="checkbox" class="mm-check" x-model="editing.groupByCountry" />
-              <span class="text-sm">按国家分组</span>
+          <div x-show={'editing.mode === "custom"'} class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <div class="sm:col-span-3">
+              <label class="mm-label">规则预设</label>
+              <select class="mm-select text-xs max-w-xs" x-model="editing.selectedRules">
+                <option value="minimal">minimal</option>
+                <option value="balanced">balanced</option>
+                <option value="comprehensive">comprehensive</option>
+              </select>
+            </div>
+            <label class="flex items-center justify-between gap-2 rounded-lg border border-[var(--border)] bg-[var(--secondary)]/20 px-3 py-2 cursor-pointer hover:border-[var(--border-hover)] transition-colors">
+              <span class="text-xs font-medium text-[var(--foreground)]">按国家分组</span>
+              <span class="relative inline-flex"><input type="checkbox" class="sr-only peer" x-model="editing.groupByCountry" /><span class="mm-switch"></span></span>
             </label>
-            <label class="inline-flex items-center gap-2 border-2 border-[var(--border)] px-3 py-2 cursor-pointer">
-              <input type="checkbox" class="mm-check" x-model="editing.includeAutoSelect" />
-              <span class="text-sm">自动选择</span>
+            <label class="flex items-center justify-between gap-2 rounded-lg border border-[var(--border)] bg-[var(--secondary)]/20 px-3 py-2 cursor-pointer hover:border-[var(--border-hover)] transition-colors">
+              <span class="text-xs font-medium text-[var(--foreground)]">自动选择</span>
+              <span class="relative inline-flex"><input type="checkbox" class="sr-only peer" x-model="editing.includeAutoSelect" /><span class="mm-switch"></span></span>
             </label>
           </div>
 
-          <div x-show={'editing.mode === "template"'} class="space-y-2">
+          <div x-show={'editing.mode === "template"'} class="space-y-1.5">
             <label class="mm-label">模板 ID</label>
-            <input type="text" class="mm-input font-mono text-xs" x-model="editing.template" placeholder="fake_ip / redirhost / Custom_Clash …" />
-            <p class="text-xs text-muted">与生成页模板 id 一致，例如 fake_ip、redirhost</p>
+            <input type="text" class="mm-input font-mono text-xs max-w-sm" x-model="editing.template" placeholder="fake_ip / redirhost / Custom_Clash …" />
+            <p class="text-[11px] text-[var(--muted-foreground)]">与生成页模板 id 一致，例如 fake_ip、redirhost</p>
           </div>
 
-          <div class="space-y-2">
+          {/* Node Selection */}
+          <div class="space-y-2 pt-2 border-t border-[var(--border)]">
             <div class="flex flex-wrap items-center justify-between gap-2">
-              <label class="mm-label mb-0">选择节点（已选 <span x-text="editing.nodeIds.length">0</span>）</label>
-              <div class="flex gap-1.5">
-                <input type="search" class="mm-input h-9 text-sm max-w-[10rem]" placeholder="筛选节点" x-model="nodeFilter" />
-                <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-on:click="selectAllFilteredNodes()">全选筛选</button>
-                <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-on:click="clearNodes()">清空</button>
+              <label class="block text-xs font-semibold text-[var(--foreground)] mb-0">选择节点（已选 <span class="text-[var(--primary)] font-bold" x-text="editing.nodeIds.length">0</span>）</label>
+              <div class="flex items-center gap-1.5">
+                <input type="search" class="mm-input h-7 text-xs max-w-[9rem]" placeholder="筛选节点" x-model="nodeFilter" />
+                <button type="button" class="mm-btn mm-btn-outline mm-btn-sm text-xs !h-7" x-on:click="selectAllFilteredNodes()">全选筛选</button>
+                <button type="button" class="mm-btn mm-btn-outline mm-btn-sm text-xs !h-7" x-on:click="clearNodes()">清空</button>
               </div>
             </div>
-            <div class="max-h-64 overflow-y-auto border-2 border-[var(--border)] divide-y divide-[var(--border)]">
+            <div class="max-h-60 overflow-y-auto rounded-xl border border-[var(--border)] divide-y divide-[var(--border)] bg-[var(--card)]">
               <template x-if="!filteredNodes.length">
-                <div class="px-3 py-8 text-center text-muted text-sm">节点库为空，请先到节点管理导入</div>
+                <div class="px-3 py-8 text-center text-[var(--muted-foreground)] text-xs">节点库为空，请先在「节点管理」导入</div>
               </template>
               <template x-for="n in filteredNodes" x-bind:key="n.id">
-                <label class="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-[color-mix(in_srgb,var(--muted)_35%,transparent)]">
+                <label class="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-[var(--secondary)]/40 text-xs transition-colors">
                   <input type="checkbox" class="mm-check" x-bind:checked="isPicked(n.id)" x-on:change="toggleNode(n.id)" />
-                  <span class="mm-chip text-[10px] uppercase" x-text="n.protocol || '?'"></span>
-                  <span class="text-sm font-medium truncate flex-1" x-text="n.name"></span>
+                  <span class="mm-chip text-[10px] uppercase font-mono" x-text="n.protocol || '?'"></span>
+                  <span class="font-medium truncate flex-1 text-[var(--foreground)]" x-text="n.name"></span>
                 </label>
               </template>
             </div>
           </div>
 
-          <div class="flex flex-wrap gap-2 pt-1">
-            <button type="button" class="mm-btn mm-btn-primary" x-on:click="saveEdit()" x-bind:disabled="saving">
+          <div class="flex flex-wrap gap-2 pt-2 border-t border-[var(--border)]">
+            <button type="button" class="mm-btn mm-btn-primary text-xs" x-on:click="saveEdit()" x-bind:disabled="saving">
               <i class="fas" x-bind:class={'saving ? "fa-spinner fa-spin" : "fa-floppy-disk"'}></i>
               保存订阅
             </button>
-            <button type="button" class="mm-btn mm-btn-outline" x-on:click="cancelEdit()">取消</button>
+            <button type="button" class="mm-btn mm-btn-outline text-xs" x-on:click="cancelEdit()">取消</button>
           </div>
         </div>
       </div>
 
-      {/* List */}
-      <div class="pixel-card mm-card" x-show="!editing">
-        <div class="card-header border-b border-[var(--border)] pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+      {/* Subscription List */}
+      <div class="rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-sm overflow-hidden" x-show="!editing">
+        <div class="border-b border-[var(--border)] px-5 py-4 bg-[var(--secondary)]/30 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
-            <div class="card-title text-base">已保存的订阅</div>
-            <div class="card-desc">共 <span x-text="items.length">0</span> 个 · 点击复制链接到客户端</div>
+            <div class="font-semibold text-sm text-[var(--foreground)] flex items-center gap-2">
+              <i class="fas fa-folder-open text-[var(--primary)] text-xs"></i>
+              <span>已保存的订阅</span>
+              <span class="font-mono text-xs text-[var(--primary)] font-normal" x-text="'(' + items.length + ')'"></span>
+            </div>
+            <div class="text-xs text-[var(--muted-foreground)] mt-0.5">点击复制对应格式链接到代理客户端</div>
           </div>
-          <input type="search" class="mm-input max-w-xs h-9 text-sm" placeholder="搜索订阅…" x-model="filter" />
+          <input type="search" class="mm-input max-w-xs h-8 text-xs" placeholder="搜索订阅…" x-model="filter" />
         </div>
-        <div class="card-content pt-2">
+        <div class="p-5">
           <template x-if="!loading && !filteredItems.length">
             <div class="py-12 text-center space-y-3">
-              <p class="text-muted">还没有保存的订阅</p>
-              <button type="button" class="mm-btn mm-btn-primary" x-on:click="startCreate()">创建第一个订阅</button>
+              <div class="w-12 h-12 mx-auto rounded-xl bg-[var(--secondary)] flex items-center justify-center text-[var(--muted-foreground)]">
+                <i class="fas fa-folder-plus text-base"></i>
+              </div>
+              <div>
+                <p class="text-sm font-semibold text-[var(--foreground)]">还没有保存的订阅</p>
+                <p class="text-xs text-[var(--muted-foreground)] mt-0.5">创建订阅后可以随时更新节点，客户端配置自动同步</p>
+              </div>
+              <button type="button" class="mm-btn mm-btn-primary mm-btn-sm text-xs" x-on:click="startCreate()">创建第一个订阅</button>
             </div>
           </template>
           <div class="divide-y divide-[var(--border)]">
             <template x-for="item in filteredItems" x-bind:key="item.id">
-              <div class="py-4 flex flex-col gap-3">
-                <div class="flex flex-col lg:flex-row lg:items-center gap-3">
-                <div class="min-w-0 flex-1 space-y-1">
-                  <div class="flex flex-wrap items-center gap-2">
-                    <span class="font-semibold" x-text="item.name"></span>
-                    <span class="mm-chip text-[10px]" x-text="item.mode === 'template' ? ('模板 ' + (item.template || '')) : ('规则 ' + (item.selectedRules || 'balanced'))"></span>
-                    <span class="text-xs text-muted" x-text="(item.nodeIds?.length || 0) + ' 节点'"></span>
+              <div class="py-3.5 flex flex-col gap-2">
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                  <div class="min-w-0 flex-1 space-y-1">
+                    <div class="flex flex-wrap items-center gap-2">
+                      <span class="font-semibold text-sm text-[var(--foreground)]" x-text="item.name"></span>
+                      <span class="mm-chip text-[10px]" x-text="item.mode === 'template' ? ('模板: ' + (item.template || '')) : ('规则: ' + (item.selectedRules || 'balanced'))"></span>
+                      <span class="text-xs text-[var(--muted-foreground)]" x-text="(item.nodeIds?.length || 0) + ' 节点'"></span>
+                    </div>
+                    <p class="text-xs text-[var(--muted-foreground)]" x-show="item.description" x-text="item.description"></p>
+                    <p class="font-mono text-[11px] text-[var(--primary)] break-all" x-text="item.url || ('/subscribe/' + item.slug)"></p>
                   </div>
-                  <p class="text-xs text-muted" x-show="item.description" x-text="item.description"></p>
-                  <p class="font-mono text-[11px] text-[var(--primary)] break-all" x-text="item.url || ('/subscribe/' + item.slug)"></p>
-                </div>
-                <div class="flex flex-wrap gap-1.5 shrink-0">
-                  <div class="inline-flex">
-                    <button type="button" class="mm-btn mm-btn-primary mm-btn-sm rounded-r-none" x-on:click="copyDefault(item)">
-                      <i class="fas fa-copy text-xs"></i> 复制
-                    </button>
-                    <button type="button" class="mm-btn mm-btn-primary mm-btn-sm rounded-l-none px-2" style="margin-left: -1px;" x-on:click="openFormatModal(item)" aria-label="选择格式">
-                      <i class="fas fa-caret-down"></i>
-                    </button>
+                  <div class="flex flex-wrap gap-1.5 shrink-0 items-center">
+                    <div class="inline-flex rounded-lg shadow-xs overflow-hidden border border-[var(--primary)]">
+                      <button type="button" class="bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 transition-colors" x-on:click="copyDefault(item)">
+                        <i class="fas fa-copy text-[10px]"></i> 复制
+                      </button>
+                      <button type="button" class="bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white px-2 py-1.5 text-xs border-l border-white/20 transition-colors" x-on:click="openFormatModal(item)" aria-label="选择格式">
+                        <i class="fas fa-caret-down text-[10px]"></i>
+                      </button>
+                    </div>
+                    <button type="button" class="mm-btn mm-btn-outline mm-btn-sm text-xs" x-on:click="startEdit(item)">编辑</button>
+                    <button type="button" class="mm-btn mm-btn-danger mm-btn-sm text-xs" x-on:click="removeItem(item)">删除</button>
                   </div>
-                  <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-on:click="startEdit(item)">编辑</button>
-                  <button type="button" class="mm-btn mm-btn-danger mm-btn-sm" x-on:click="removeItem(item)">删除</button>
                 </div>
-              </div>
               </div>
             </template>
           </div>
         </div>
       </div>
 
-      {/* Format selector modal: centered fixed overlay, outside pixel-cards to avoid stacking context traps */}
+      {/* Format selector modal: centered modern fixed dialog */}
       <div
         x-show="formatModal"
         x-cloak
@@ -448,22 +479,24 @@ export const SubscriptionManager = () => {
           x-on:click="closeFormatModal()"
         ></div>
         <div
-          class="relative z-10 w-full max-w-sm border-2 border-[var(--border)] bg-[var(--card)] text-[var(--card-foreground)] shadow-2xl p-4 space-y-3"
+          class="relative z-10 w-full max-w-sm rounded-2xl border border-[var(--border)] bg-[var(--card)] text-[var(--card-foreground)] shadow-2xl p-5 space-y-3.5"
           x-on:click="$event.stopPropagation()"
         >
-          <div class="flex items-center justify-between border-b border-[var(--border)] pb-2">
-            <div class="font-semibold text-sm flex items-center gap-1.5">
-              <i class="fas fa-link text-xs text-[var(--primary)]"></i>
-              <span>选择复制格式</span>
-              <span class="text-xs text-muted font-normal" x-show="formatItem" x-text="'(' + (formatItem?.name || '') + ')'"></span>
+          <div class="flex items-center justify-between border-b border-[var(--border)] pb-2.5">
+            <div class="font-semibold text-sm text-[var(--foreground)] flex items-center gap-2">
+              <span class="w-6 h-6 rounded-md bg-[var(--primary-light)] text-[var(--primary)] flex items-center justify-center text-xs">
+                <i class="fas fa-link"></i>
+              </span>
+              <span>选择订阅格式</span>
+              <span class="text-xs text-[var(--muted-foreground)] font-normal truncate max-w-[8rem]" x-show="formatItem" x-text="'(' + (formatItem?.name || '') + ')'"></span>
             </div>
             <button
               type="button"
-              class="text-muted-foreground hover:text-[var(--foreground)] p-1 text-sm transition-colors"
+              class="h-7 w-7 inline-flex items-center justify-center rounded-lg text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--secondary)] transition-colors"
               x-on:click="closeFormatModal()"
               aria-label="关闭"
             >
-              <i class="fas fa-times"></i>
+              <i class="fas fa-times text-xs"></i>
             </button>
           </div>
 
@@ -471,7 +504,7 @@ export const SubscriptionManager = () => {
             {copyFormats.map((fmt) => (
               <button
                 type="button"
-                class="flex items-center justify-between px-2.5 py-2 text-xs font-medium border border-[var(--border)] hover:border-[var(--primary)] hover:bg-[color-mix(in_srgb,var(--primary)_15%,transparent)] transition-all text-left group"
+                class="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium border border-[var(--border)] hover:border-[var(--primary)] hover:bg-[var(--primary-light)] hover:text-[var(--primary)] transition-all text-left group"
                 x-on:click={`copyByFormatKey(formatItem, '${fmt.key}')`}
               >
                 <span class="truncate">{fmt.label}</span>
@@ -479,7 +512,7 @@ export const SubscriptionManager = () => {
               </button>
             ))}
           </div>
-          <p class="text-[11px] text-muted text-center pt-1">点击格式即可复制对应订阅链接</p>
+          <p class="text-[11px] text-[var(--muted-foreground)] text-center pt-1">点击格式即可复制带对应参数的客户端订阅链接</p>
         </div>
       </div>
 

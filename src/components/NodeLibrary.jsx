@@ -697,209 +697,230 @@ export const NodeLibrary = (props) => {
         <p class="mm-desc mt-2">加载节点库…</p>
       </div>
 
-      <div x-show="bootstrapped && authRequired && !authenticated" class="pixel-card mm-card max-w-md">
-        <div class="border-b border-[var(--border)] px-5 py-4">
-          <h2 class="text-lg font-semibold tracking-tight">登录节点库</h2>
-          <p class="mm-desc mt-1">密码鉴权后节点将同步到服务端 KV，可跨设备访问。</p>
+      {/* Login Prompt if not authenticated */}
+      <div x-show="bootstrapped && authRequired && !authenticated" class="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6 max-w-md mx-auto shadow-sm space-y-4">
+        <div>
+          <h2 class="text-base font-semibold text-[var(--foreground)]">登录节点库</h2>
+          <p class="text-xs text-[var(--muted-foreground)] mt-0.5">密码鉴权后节点将同步到服务端 KV，可跨设备持久化访问</p>
         </div>
-        <div class="p-5 space-y-3">
-          <div>
-            <label class="mm-label">管理密码</label>
+        <div class="space-y-3">
+          <div class="space-y-1">
+            <label class="block text-xs font-medium text-[var(--foreground)]">管理密码</label>
             <input
               type="password"
-              class="mm-input"
+              class="mm-input text-xs"
               x-model="password"
-              placeholder="AUTH_PASSWORD"
+              placeholder="请输入 AUTH_PASSWORD"
               {...{ 'x-on:keydown.enter.prevent': 'login()' }}
             />
           </div>
-          <p class="text-sm text-red-500" x-show="loginError" x-text="loginError"></p>
-          <p class="mm-desc" x-show="!kvReady">警告：当前未检测到 KV，登录后可能无法持久化。</p>
-          <button type="button" class="mm-btn mm-btn-primary w-full" x-on:click="login()" x-bind:disabled="loading">
-            <i class="fas" x-bind:class={'loading ? "fa-spinner fa-spin" : "fa-right-to-bracket"'}></i>
+          <p class="text-xs text-red-500 font-medium" x-show="loginError" x-text="loginError"></p>
+          <div class="text-xs text-amber-500" x-show="!kvReady">警告：当前未检测到 KV，登录后可能无法持久化。</div>
+          <button type="button" class="mm-btn mm-btn-primary w-full text-xs py-2" x-on:click="login()" x-bind:disabled="loading">
+            <i class="fas" x-bind:class={'loading ? "fa-spinner fa-spin" : "fa-right-to-bracket text-xs"'}></i>
             登录
           </button>
         </div>
       </div>
 
-      <div x-show="bootstrapped && authenticated" class="pixel-card mm-card">
-        <div class="card-header border-b border-[var(--border)] pb-4">
-          <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+      {/* Main Node Library View */}
+      <div x-show="bootstrapped && authenticated" class="rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-sm overflow-hidden">
+        {/* Card Header */}
+        <div class="border-b border-[var(--border)] px-5 py-4 bg-[var(--secondary)]/30">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <div class="card-title text-base">导入节点</div>
-              <p class="card-desc">
-                导入并管理节点 · 自动同步到云端
-                <span class="ml-2 font-mono text-[11px] text-[var(--primary)]" x-text="nodes.length + ' 节点 · 选中 ' + selectedCount"></span>
-                <span class="ml-2 text-[11px] opacity-70" x-show="saving" x-cloak>已同步保存…</span>
+              <div class="font-semibold text-sm text-[var(--foreground)] flex items-center gap-2">
+                <i class="fas fa-network-wired text-[var(--primary)] text-xs"></i>
+                <span>节点库管理</span>
+                <span class="font-mono text-xs text-[var(--primary)] font-normal" x-text="'(' + nodes.length + ' 节点 · 选中 ' + selectedCount + ')'"></span>
+              </div>
+              <p class="text-xs text-[var(--muted-foreground)] mt-0.5">
+                节点自动同步至云端 KV
+                <span class="ml-1 text-emerald-500 font-medium text-[11px]" x-show="saving" x-cloak>• 同步中…</span>
               </p>
             </div>
             <div class="flex flex-wrap gap-1.5">
-              <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-on:click="loadFromServer()">
-                <i class="fas fa-rotate text-[10px]"></i>刷新
+              <button type="button" class="mm-btn mm-btn-outline mm-btn-sm text-xs" x-on:click="loadFromServer()">
+                <i class="fas fa-rotate text-[10px]"></i> 刷新
               </button>
-              <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-on:click="importFromInput()">
-                <i class="fas fa-file-import text-[10px]"></i>从输入源导入
+              <button type="button" class="mm-btn mm-btn-outline mm-btn-sm text-xs" x-on:click="importFromInput()">
+                <i class="fas fa-file-import text-[10px]"></i> 从输入源导入
               </button>
-              <button type="button" class="mm-btn mm-btn-primary mm-btn-sm" x-on:click="applyToConverter({ convert: true })" x-bind:disabled="selectedCount === 0">
-                <i class="fas fa-bolt text-[10px]"></i>用选中生成
+              <button type="button" class="mm-btn mm-btn-primary mm-btn-sm text-xs" x-on:click="applyToConverter({ convert: true })" x-bind:disabled="selectedCount === 0">
+                <i class="fas fa-bolt text-[10px]"></i> 用选中生成
               </button>
             </div>
           </div>
         </div>
-        <div class="card-content pt-4 space-y-4">
 
-        <div class="grid grid-cols-1 lg:grid-cols-5 gap-3 mb-3">
-          <div class="lg:col-span-3 space-y-3">
-            <div>
-              <label class="mm-label">粘贴节点分享链接</label>
-              <textarea
-                x-model="pasteBox"
-                rows={3}
-                class="mm-textarea font-mono text-[12px] min-h-[5.5rem]"
-                placeholder="每行一条：ss / vmess / vless / trojan / hysteria2 …&#10;也可只粘贴一条 http(s) 订阅地址，将自动远程拉取"
-              ></textarea>
+        <div class="p-5 space-y-4">
+          {/* Import Forms Grid */}
+          <div class="grid grid-cols-1 lg:grid-cols-5 gap-3.5">
+            {/* Left: Paste & Remote URL */}
+            <div class="lg:col-span-3 space-y-3">
+              <div>
+                <label class="block text-xs font-semibold text-[var(--foreground)] mb-1">粘贴节点分享链接</label>
+                <textarea
+                  x-model="pasteBox"
+                  rows={3}
+                  class="mm-textarea font-mono text-xs min-h-[5.5rem]"
+                  placeholder="每行一条：ss / vmess / vless / trojan / hysteria2 …&#10;也可只粘贴一条 http(s) 订阅地址，将自动远程拉取"
+                ></textarea>
+              </div>
+              <div class="space-y-2">
+                <label class="block text-xs font-semibold text-[var(--foreground)]">远程订阅 URL</label>
+                <div class="flex gap-2">
+                  <input type="url" class="mm-input font-mono text-xs flex-1" x-model="remoteUrl" placeholder="https://example.com/sub" />
+                  <button type="button" class="mm-btn mm-btn-secondary mm-btn-sm text-xs shrink-0" x-on:click="importRemoteUrl()" x-bind:disabled="importing">
+                    <i class="fas" x-bind:class={'importing ? "fa-spinner fa-spin" : "fa-cloud-arrow-down"'}></i>
+                    <span x-text={'importing ? "拉取中…" : "拉取导入"'}></span>
+                  </button>
+                </div>
+                <div class="flex flex-wrap gap-3 text-xs text-[var(--muted-foreground)]">
+                  <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                    <input type="radio" class="mm-check" name="importMode" value="replace" x-model="importMode" />
+                    <span>更新替换（推荐）</span>
+                  </label>
+                  <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                    <input type="radio" class="mm-check" name="importMode" value="merge" x-model="importMode" />
+                    <span>合并追加</span>
+                  </label>
+                </div>
+
+                {/* Import Report Bubble */}
+                <div class="rounded-xl border border-[var(--border)] bg-[var(--secondary)]/40 p-3 text-xs space-y-1" x-show="importReport" x-cloak>
+                  <template x-if="importReport && importReport.error">
+                    <p class="text-red-500 font-medium" x-text="importReport.error"></p>
+                  </template>
+                  <template x-if="importReport && !importReport.error">
+                    <div class="space-y-1">
+                      <p class="font-medium text-[var(--foreground)]" x-text="importReport.message"></p>
+                      <p class="text-[var(--muted-foreground)] text-[11px]">
+                        解析 <span x-text="importReport.parsed"></span>
+                        · 新增 <span class="text-emerald-500 font-semibold" x-text="importReport.added"></span>
+                        · 更新 <span class="text-amber-500 font-semibold" x-text="importReport.updated"></span>
+                        · 移除 <span class="text-red-500 font-semibold" x-text="importReport.removed"></span>
+                        · 跳过 <span x-text="importReport.skipped"></span>
+                        · 格式 <span class="font-mono uppercase" x-text="importReport.format"></span>
+                      </p>
+                      <p class="text-[var(--muted-foreground)] font-mono text-[10px] truncate" x-show="importReport.source" x-text="importReport.source"></p>
+                    </div>
+                  </template>
+                </div>
+              </div>
             </div>
-            <div class="space-y-2">
-              <label class="mm-label">远程订阅 URL</label>
-              <div class="flex gap-2">
-                <input type="url" class="mm-input font-mono text-xs flex-1" x-model="remoteUrl" placeholder="https://example.com/sub" />
-                <button type="button" class="mm-btn mm-btn-secondary mm-btn-sm shrink-0" x-on:click="importRemoteUrl()" x-bind:disabled="importing">
-                  <i class="fas" x-bind:class={'importing ? "fa-spinner fa-spin" : "fa-cloud-download-alt"'}></i>
-                  <span x-text={'importing ? "导入中…" : "拉取导入"'}></span>
+
+            {/* Right: Search & Actions */}
+            <div class="lg:col-span-2 flex flex-col justify-between gap-3 p-3.5 rounded-xl border border-[var(--border)] bg-[var(--secondary)]/20">
+              <div class="space-y-2">
+                <label class="block text-xs font-semibold text-[var(--foreground)]">筛选节点</label>
+                <input type="search" x-model="filter" class="mm-input text-xs" placeholder="按名称 / 协议 / 标签搜索…" />
+              </div>
+              <div class="flex flex-col gap-2 pt-2 border-t border-[var(--border)]">
+                <button type="button" class="mm-btn mm-btn-primary w-full text-xs py-2" x-on:click="importFromPaste()" x-bind:disabled="importing">
+                  <i class="fas fa-plus text-[10px]"></i> 保存到节点库
                 </button>
-              </div>
-              <div class="flex flex-wrap gap-3 text-xs">
-                <label class="inline-flex items-center gap-1.5 cursor-pointer">
-                  <input type="radio" class="mm-check" name="importMode" value="replace" x-model="importMode" />
-                  更新替换（推荐）
-                </label>
-                <label class="inline-flex items-center gap-1.5 cursor-pointer">
-                  <input type="radio" class="mm-check" name="importMode" value="merge" x-model="importMode" />
-                  合并追加
-                </label>
-              </div>
-              <p class="text-[11px] text-muted">更新替换：删除该订阅来源的旧节点后写入最新列表。合并追加：只补新节点并刷新已有元数据。</p>
-              <div class="border-2 border-[var(--border)] p-3 text-xs space-y-1" x-show="importReport" x-cloak>
-                <template x-if="importReport && importReport.error">
-                  <p class="text-red-500" x-text="importReport.error"></p>
-                </template>
-                <template x-if="importReport && !importReport.error">
-                  <div class="space-y-1">
-                    <p class="font-medium text-[var(--foreground)]" x-text="importReport.message"></p>
-                    <p class="text-muted">
-                      解析 <span x-text="importReport.parsed"></span>
-                      · 新增 <span x-text="importReport.added"></span>
-                      · 更新 <span x-text="importReport.updated"></span>
-                      · 移除 <span x-text="importReport.removed"></span>
-                      · 跳过 <span x-text="importReport.skipped"></span>
-                      · 格式 <span x-text="importReport.format"></span>
-                    </p>
-                    <p class="text-muted font-mono truncate" x-show="importReport.source" x-text="importReport.source"></p>
-                    <p class="text-muted" x-show="importReport.samples && importReport.samples.length">
-                      示例：<span x-text={'(importReport.samples || []).join(" · ")'}></span>
-                    </p>
-                  </div>
-                </template>
+                <div class="grid grid-cols-2 gap-1.5">
+                  <button type="button" class="mm-btn mm-btn-outline text-xs py-1.5" x-on:click="applyToConverter({ convert: false })" x-bind:disabled="selectedCount === 0">
+                    填入生成页
+                  </button>
+                  <button type="button" class="mm-btn mm-btn-outline text-xs py-1.5" x-on:click="exportSelected()" x-bind:disabled="selectedCount === 0">
+                    复制选中
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-          <div class="lg:col-span-2 flex flex-col gap-2">
-            <label class="mm-label">筛选</label>
-            <input type="search" x-model="filter" class="mm-input" placeholder="名称 / 协议 / 标签" />
-            <div class="flex flex-wrap gap-2 mt-auto">
-              <button type="button" class="mm-btn mm-btn-primary flex-1 text-sm" x-on:click="importFromPaste()" x-bind:disabled="importing">
-                <i class="fas fa-plus text-xs"></i>
-                保存到节点库
+
+          {/* List Controls */}
+          <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--muted-foreground)] pt-2 border-t border-[var(--border)]">
+            <div class="flex items-center gap-3">
+              <label class="inline-flex items-center gap-1.5 cursor-pointer font-medium text-[var(--foreground)]">
+                <input type="checkbox" class="mm-check" x-bind:checked="selectAll" x-on:change="toggleSelectAll()" />
+                全选当前列表
+              </label>
+              <button type="button" class="hover:text-red-500 transition-colors" x-on:click="removeSelected()" x-show="nodes.some(n => n.selected)">
+                删除选中
               </button>
-              <button type="button" class="mm-btn mm-btn-ghost text-sm" x-on:click="applyToConverter({ convert: false })" x-bind:disabled="selectedCount === 0">
-                填入生成页
-              </button>
-              <button type="button" class="mm-btn mm-btn-ghost text-sm" x-on:click="exportSelected()" x-bind:disabled="selectedCount === 0">
-                复制选中
+              <button type="button" class="hover:text-red-500 transition-colors" x-on:click="clearAll()" x-show="nodes.length">
+                清空全库
               </button>
             </div>
+            <span class="text-xs text-[var(--primary)] font-medium" x-show="flash" x-text="flash"></span>
           </div>
-        </div>
 
-        <div class="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--muted-foreground)]">
-          <div class="flex items-center gap-3">
-            <label class="inline-flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" class="mm-check" x-bind:checked="selectAll" x-on:change="toggleSelectAll()" />
-              全选当前列表
-            </label>
-            <button type="button" class="hover:text-[var(--destructive)]" x-on:click="removeSelected()" x-show="nodes.some(n => n.selected)">
-              删除选中
-            </button>
-            <button type="button" class="hover:text-[var(--destructive)]" x-on:click="clearAll()" x-show="nodes.length">
-              清空
-            </button>
-          </div>
-          <span class="text-[var(--primary)]" x-show="flash" x-text="flash"></span>
-        </div>
-
-        <div class="rounded-[var(--radius)] border border-[var(--border)] overflow-hidden">
-          <div class="max-h-[22rem] overflow-auto">
-            <template x-if="filtered.length === 0">
-              <div class="px-4 py-10 text-center mm-desc space-y-2">
-                <p>暂无节点</p>
-                <p class="text-xs">粘贴分享链接点「保存到节点库」，或填写远程订阅 URL 点「拉取导入」</p>
-              </div>
-            </template>
-            <table class="w-full text-sm" x-show="filtered.length > 0">
-              <thead class="sticky top-0 bg-[color-mix(in_srgb,var(--muted)_70%,var(--card))] text-[var(--muted-foreground)] text-xs">
-                <tr class="border-b border-[var(--border)]">
-                  <th class="w-10 px-3 py-2 text-left font-medium"></th>
-                  <th class="px-2 py-2 text-left font-medium">名称</th>
-                  <th class="px-2 py-2 text-left font-medium hidden sm:table-cell">协议</th>
-                  <th class="px-2 py-2 text-left font-medium hidden md:table-cell">启用</th>
-                  <th class="w-20 px-2 py-2 text-right font-medium">操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                <template x-for="node in filtered" x-bind:key="node.id">
-                  <tr class="border-b border-[var(--border)] last:border-0 hover:bg-[color-mix(in_srgb,var(--muted)_35%,transparent)]" x-bind:class={'node.enabled === false ? "opacity-50" : ""'}>
-                    <td class="px-3 py-2">
-                      <input type="checkbox" class="mm-check" x-model="node.selected" />
-                    </td>
-                    <td class="px-2 py-2 min-w-0">
-                      <template x-if="editingId !== node.id">
-                        <button type="button" class="text-left font-medium text-[var(--foreground)] hover:text-[var(--primary)] truncate max-w-[14rem] sm:max-w-xs block" x-text="node.name" x-on:click="startEdit(node)" title="点击改名"></button>
-                      </template>
-                      <template x-if="editingId === node.id">
-                        <input
-                          type="text"
-                          class="mm-input py-1 text-sm"
-                          x-model="editName"
-                          {...{
-                            'x-on:keydown.enter.prevent': 'commitEdit(node)',
-                            'x-on:keydown.escape.prevent': 'editingId = null',
-                            'x-on:blur': 'commitEdit(node)',
-                            'x-init': '$nextTick(function(){ $el.focus() })'
-                          }}
-                        />
-                      </template>
-                      <div class="font-mono text-[10px] text-[var(--muted-foreground)] truncate max-w-[14rem] sm:max-w-md" x-text="node.raw"></div>
-                    </td>
-                    <td class="px-2 py-2 hidden sm:table-cell">
-                      <span class="inline-flex rounded-md px-1.5 py-0.5 text-[11px] font-medium" x-bind:class="protocolBadge(node.protocol)" x-text="node.protocol"></span>
-                    </td>
-                    <td class="px-2 py-2 hidden md:table-cell">
-                      <label class="relative inline-flex cursor-pointer">
-                        <input type="checkbox" class="sr-only peer" x-model="node.enabled" />
-                        <span class="mm-switch scale-90 origin-left"></span>
-                      </label>
-                    </td>
-                    <td class="px-2 py-2 text-right">
-                      <button type="button" class="mm-btn mm-btn-ghost mm-btn-icon !h-8 !w-8" title="删除" x-on:click="removeOne(node.id)">
-                        <i class="fas fa-trash-alt text-[11px] text-[var(--destructive)]"></i>
-                      </button>
-                    </td>
+          {/* Table Container */}
+          <div class="rounded-xl border border-[var(--border)] overflow-hidden bg-[var(--card)]">
+            <div class="max-h-[26rem] overflow-auto">
+              <template x-if="filtered.length === 0">
+                <div class="px-4 py-12 text-center text-xs text-[var(--muted-foreground)] space-y-1.5">
+                  <div class="text-sm font-semibold text-[var(--foreground)]">暂无节点</div>
+                  <p>粘贴分享链接点击「保存到节点库」，或输入远程订阅 URL 点击「拉取导入」</p>
+                </div>
+              </template>
+              <table class="w-full text-xs" x-show="filtered.length > 0">
+                <thead class="sticky top-0 bg-[var(--secondary)]/80 backdrop-blur-sm text-[var(--muted-foreground)] text-[11px] uppercase tracking-wider font-semibold border-b border-[var(--border)] z-10">
+                  <tr>
+                    <th class="w-10 px-3 py-2.5 text-left"></th>
+                    <th class="px-3 py-2.5 text-left">名称</th>
+                    <th class="px-3 py-2.5 text-left hidden sm:table-cell">协议</th>
+                    <th class="px-3 py-2.5 text-left hidden md:table-cell">状态</th>
+                    <th class="w-16 px-3 py-2.5 text-right">操作</th>
                   </tr>
-                </template>
-              </tbody>
-            </table>
+                </thead>
+                <tbody class="divide-y divide-[var(--border)]">
+                  <template x-for="node in filtered" x-bind:key="node.id">
+                    <tr class="hover:bg-[var(--secondary)]/40 transition-colors" x-bind:class={'node.enabled === false ? "opacity-40" : ""'}>
+                      <td class="px-3 py-2.5">
+                        <input type="checkbox" class="mm-check" x-model="node.selected" />
+                      </td>
+                      <td class="px-3 py-2.5 min-w-0">
+                        <template x-if="editingId !== node.id">
+                          <button
+                            type="button"
+                            class="text-left font-medium text-[var(--foreground)] hover:text-[var(--primary)] truncate max-w-[14rem] sm:max-w-xs block transition-colors"
+                            x-text="node.name"
+                            x-on:click="startEdit(node)"
+                            title="点击修改名称"
+                          ></button>
+                        </template>
+                        <template x-if="editingId === node.id">
+                          <input
+                            type="text"
+                            class="mm-input py-1 text-xs max-w-xs"
+                            x-model="editName"
+                            {...{
+                              'x-on:keydown.enter.prevent': 'commitEdit(node)',
+                              'x-on:keydown.escape.prevent': 'editingId = null',
+                              'x-on:blur': 'commitEdit(node)',
+                              'x-init': '$nextTick(function(){ $el.focus() })'
+                            }}
+                          />
+                        </template>
+                        <div class="font-mono text-[10px] text-[var(--muted-foreground)] truncate max-w-[14rem] sm:max-w-md mt-0.5" x-text="node.raw"></div>
+                      </td>
+                      <td class="px-3 py-2.5 hidden sm:table-cell">
+                        <span class="inline-flex rounded px-1.5 py-0.5 text-[10px] font-mono uppercase font-medium bg-[var(--secondary)] border border-[var(--border)]" x-text="node.protocol || '?'"></span>
+                      </td>
+                      <td class="px-3 py-2.5 hidden md:table-cell">
+                        <label class="relative inline-flex cursor-pointer">
+                          <input type="checkbox" class="sr-only peer" x-model="node.enabled" />
+                          <span class="mm-switch scale-90 origin-left"></span>
+                        </label>
+                      </td>
+                      <td class="px-3 py-2.5 text-right">
+                        <button type="button" class="h-7 w-7 inline-flex items-center justify-center rounded-lg text-[var(--muted-foreground)] hover:text-red-500 hover:bg-red-500/10 transition-colors" title="删除" x-on:click="removeOne(node.id)">
+                          <i class="fas fa-trash-alt text-xs"></i>
+                        </button>
+                      </td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
+      </div>
         </div>
       </div>
 
