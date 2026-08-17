@@ -237,9 +237,6 @@ export const SubscriptionManager = () => {
       };
     }
   `;
-      };
-    }
-  `;
 
   return (
     <div x-data="subscriptionManagerData()" x-init="init()" class="space-y-4">
