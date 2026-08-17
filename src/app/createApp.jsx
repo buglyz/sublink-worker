@@ -1,6 +1,7 @@
 /** @jsxRuntime automatic */
 /** @jsxImportSource hono/jsx */
 import { Hono } from 'hono';
+import yaml from 'js-yaml';
 import { Layout } from '../components/Layout.jsx';
 import { Navbar } from '../components/Navbar.jsx';
 import { Form } from '../components/Form.jsx';
@@ -21,11 +22,16 @@ import { NodeStorageService } from '../services/nodeStorageService.js';
 import { ExportTokenService } from '../services/exportTokenService.js';
 import { NodeImportService } from '../services/nodeImportService.js';
 import { SubscriptionStorageService } from '../services/subscriptionStorageService.js';
+import { TempSubscriptionService } from '../services/tempSubscriptionService.js';
+import { ProxyProviderService } from '../services/proxyProviderService.js';
 import { resolveXraySubscriptionLines } from '../services/xraySubscriptionService.js';
 import { ServiceError, MissingDependencyError, UnauthorizedError, InvalidPayloadError } from '../services/errors.js';
 import { createRateLimiter } from '../services/rateLimiter.js';
 import { normalizeRuntime } from '../runtime/runtimeConfig.js';
 import { PREDEFINED_RULE_SETS, SING_BOX_CONFIG, SING_BOX_CONFIG_V1_11, generateSubconverterConfig } from '../config/index.js';
+import { fetchSubscriptionWithFormat } from '../parsers/subscription/httpSubscriptionFetcher.js';
+import { parseSubscriptionContent } from '../parsers/subscription/subscriptionContentParser.js';
+import { proxiesToShareNodes, extractUriLines } from '../utils/proxyShareUri.js';
 
 const DEFAULT_USER_AGENT = 'curl/7.74.0';
 const PUBLIC_SUB_CACHE_HEADERS = {
@@ -48,7 +54,9 @@ export function createApp(bindings = {}) {
         nodes: nodeStorage,
         exportToken: runtime.kv ? new ExportTokenService(runtime.kv) : null,
         nodeImport: nodeStorage ? new NodeImportService(nodeStorage) : null,
-        subscriptions: runtime.kv ? new SubscriptionStorageService(runtime.kv, storageCoordinator) : null
+        subscriptions: runtime.kv ? new SubscriptionStorageService(runtime.kv, storageCoordinator) : null,
+        tempSubs: runtime.kv ? new TempSubscriptionService(runtime.kv) : null,
+        proxyProvider: runtime.kv ? new ProxyProviderService(runtime.kv) : null
     };
     const importLimiter = createRateLimiter({
         name: '远程导入',
@@ -813,6 +821,313 @@ export function createApp(bindings = {}) {
 
             return c.text(config, 200, {
                 'Content-Type': 'text/plain; charset=utf-8'
+            });
+        } catch (error) {
+            return handleError(c, error, runtime.logger);
+        }
+    });
+
+    // ===== 订阅转换功能（参考 miaomiaowu）=====
+
+    /**
+     * 无状态订阅转换端点。
+     * 输入外部订阅 URL，服务端拉取解析后直接输出目标格式配置。
+     * 用法类似 subconverter 的 /sub?target=&url=。
+     *
+     * 参数：
+     *   url              - 外部订阅地址（http/https，必填）
+     *   format/target    - clash(默认) | singbox | surge | base64 | raw
+     *   ua               - 拉取订阅用的 User-Agent
+     *   selectedRules    - 规则集预设名或 JSON 数组
+     *   customRules      - 自定义规则 JSON 数组
+     *   template         - Clash 模板 ID（仅 format=clash 时生效）
+     *   group_by_country - 是否按国家分组
+     *   include_auto_select - 是否包含自动选择组
+     */
+    app.get('/api/convert', requireAuth, async (c) => {
+        try {
+            const url = String(c.req.query('url') || '').trim();
+            if (!/^https?:\/\//i.test(url)) {
+                throw new InvalidPayloadError('请提供有效的 http(s) 订阅地址');
+            }
+
+            const ua = c.req.query('ua') || c.req.query('subscription_ua') || 'clash.meta/1.0';
+            const fetched = await fetchSubscriptionWithFormat(url, ua);
+            if (!fetched || !fetched.content) {
+                throw new ServiceError('无法拉取订阅内容（网络错误或响应为空）', 502);
+            }
+
+            const parsed = parseSubscriptionContent(fetched.content);
+            const subTag = (() => { try { return new URL(url).hostname; } catch { return ''; } })() || 'remote';
+            const nodes = proxiesToShareNodes(parsed, { tag: subTag });
+            let lines = nodes.map((n) => String(n.raw).trim()).filter(Boolean);
+            // 解析失败时回退：直接从原文提取 URI 行
+            if (!lines.length) {
+                lines = extractUriLines(fetched.content);
+            }
+            if (!lines.length) {
+                throw new ServiceError(
+                    `订阅已拉取，但未能解析出节点（格式: ${fetched.format || 'unknown'}）`,
+                    422
+                );
+            }
+
+            const joined = lines.join('\n');
+            const format = String(c.req.query('format') || c.req.query('target') || 'clash').toLowerCase();
+
+            if (format === 'raw' || format === 'uri' || format === 'text') {
+                return c.text(joined, 200, {
+                    'Content-Type': 'text/plain; charset=utf-8',
+                    ...PUBLIC_SUB_CACHE_HEADERS
+                });
+            }
+            if (format === 'base64' || format === 'b64' || format === 'v2ray') {
+                return c.text(encodeBase64(joined), 200, {
+                    'Content-Type': 'text/plain; charset=utf-8',
+                    ...PUBLIC_SUB_CACHE_HEADERS
+                });
+            }
+
+            const lang = resolveLanguage(c.get('lang') || c.req.query('lang'));
+            const clientUa = c.req.query('client_ua') || getRequestHeader(c.req, 'User-Agent') || DEFAULT_USER_AGENT;
+            const selectedRules = resolveRulesPreference(
+                c.req.query('selectedRules'),
+                null
+            );
+            const customRules = resolveCustomRulesPreference(
+                c.req.query('customRules'),
+                null
+            );
+            const groupByCountry = parseBooleanFlag(c.req.query('group_by_country'));
+            const includeAutoSelect = c.req.query('include_auto_select') !== 'false';
+
+            if (format === 'clash') {
+                const templateId = (c.req.query('template') || c.req.query('rule_template') || '').trim();
+                const headers = { 'Content-Type': 'text/yaml; charset=utf-8', ...PUBLIC_SUB_CACHE_HEADERS };
+
+                if (templateId) {
+                    const builder = new TemplateClashBuilder(joined, templateId, { lang, userAgent: clientUa });
+                    await builder.build();
+                    const userinfo = builder.getSubscriptionUserinfo();
+                    if (userinfo) headers['subscription-userinfo'] = userinfo;
+                    return c.text(builder.formatConfig(), 200, headers);
+                }
+
+                const builder = new ClashConfigBuilder(
+                    joined,
+                    selectedRules,
+                    customRules,
+                    undefined,
+                    lang,
+                    clientUa,
+                    groupByCountry,
+                    false,
+                    undefined,
+                    undefined,
+                    includeAutoSelect
+                );
+                await builder.build();
+                const userinfo = builder.getSubscriptionUserinfo();
+                if (userinfo) headers['subscription-userinfo'] = userinfo;
+                return c.text(builder.formatConfig(), 200, headers);
+            }
+
+            if (format === 'singbox') {
+                const requestUserAgent = getRequestHeader(c.req, 'User-Agent');
+                const singboxVersion = resolveSingboxConfigVersion(
+                    c.req.query('singbox_version') || c.req.query('sb_version') || c.req.query('sb_ver'),
+                    requestUserAgent
+                );
+                const baseConfig = singboxVersion === '1.11' ? SING_BOX_CONFIG_V1_11 : SING_BOX_CONFIG;
+                const builder = new SingboxConfigBuilder(
+                    joined,
+                    selectedRules,
+                    customRules,
+                    baseConfig,
+                    lang,
+                    clientUa,
+                    groupByCountry,
+                    false,
+                    undefined,
+                    undefined,
+                    singboxVersion,
+                    includeAutoSelect
+                );
+                await builder.build();
+                const headers = { 'Content-Type': 'application/json; charset=utf-8', ...PUBLIC_SUB_CACHE_HEADERS };
+                const userinfo = builder.getSubscriptionUserinfo();
+                if (userinfo) headers['subscription-userinfo'] = userinfo;
+                return c.json(builder.config, 200, headers);
+            }
+
+            if (format === 'surge') {
+                const builder = new SurgeConfigBuilder(
+                    joined,
+                    selectedRules,
+                    customRules,
+                    undefined,
+                    lang,
+                    clientUa,
+                    groupByCountry,
+                    includeAutoSelect
+                );
+                builder.setSubscriptionUrl(url);
+                await builder.build();
+                const headers = { 'Content-Type': 'text/plain; charset=utf-8', ...PUBLIC_SUB_CACHE_HEADERS };
+                const userinfo = builder.getSubscriptionUserinfo();
+                if (userinfo) headers['subscription-userinfo'] = userinfo;
+                return c.text(builder.formatConfig(), 200, headers);
+            }
+
+            throw new InvalidPayloadError('不支持的 format：可选 clash / singbox / surge / base64 / raw');
+        } catch (error) {
+            return handleError(c, error, runtime.logger);
+        }
+    });
+
+    // ===== Proxy Provider（妙妙屋处理模式）=====
+
+    /**
+     * 创建 proxy-provider 配置。
+     * Body: { name?, url, userAgent?, processMode?: 'mmw'|'client' }
+     */
+    app.post('/api/proxy-providers', requireAuth, async (c) => {
+        try {
+            const body = await c.req.json().catch(() => ({}));
+            const svc = services.proxyProvider;
+            if (!svc) throw new MissingDependencyError('Proxy Provider 服务需要 KV 存储');
+            const record = await svc.create(body);
+            const origin = new URL(c.req.url).origin;
+            return c.json({
+                ...record,
+                url: `${origin}/api/proxy-provider/${record.id}`
+            }, 201);
+        } catch (error) {
+            return handleError(c, error, runtime.logger);
+        }
+    });
+
+    /**
+     * 获取 proxy-provider 配置详情（不输出 YAML）。
+     */
+    app.get('/api/proxy-providers/:id', requireAuth, async (c) => {
+        try {
+            const svc = services.proxyProvider;
+            if (!svc) throw new MissingDependencyError('Proxy Provider 服务需要 KV 存储');
+            const record = await svc.get(c.req.param('id'));
+            if (!record) throw new ServiceError('配置不存在', 404);
+            return c.json(record);
+        } catch (error) {
+            return handleError(c, error, runtime.logger);
+        }
+    });
+
+    /**
+     * 输出 proxy-provider 的 Clash proxies YAML（妙妙屋处理模式）。
+     * 此端点供客户端 proxy-providers 直接引用，可公开访问。
+     */
+    app.get('/api/proxy-provider/:id', async (c) => {
+        try {
+            const svc = services.proxyProvider;
+            if (!svc) throw new MissingDependencyError('Proxy Provider 服务需要 KV 存储');
+            const result = await svc.serve(c.req.param('id') || '');
+            return c.text(result.yaml, 200, {
+                'Content-Type': 'text/yaml; charset=utf-8',
+                ...PUBLIC_SUB_CACHE_HEADERS,
+                'X-Proxy-Provider-Count': String(result.nodeCount),
+                'X-Proxy-Provider-Cache': result.cached ? 'hit' : 'miss'
+            });
+        } catch (error) {
+            return handleError(c, error, runtime.logger);
+        }
+    });
+
+    /**
+     * 手动刷新 proxy-provider 缓存。
+     */
+    app.post('/api/proxy-providers/:id/refresh', requireAuth, async (c) => {
+        try {
+            const svc = services.proxyProvider;
+            if (!svc) throw new MissingDependencyError('Proxy Provider 服务需要 KV 存储');
+            const result = await svc.refresh(c.req.param('id') || '');
+            return c.json({
+                nodeCount: result.nodeCount,
+                cached: result.cached
+            });
+        } catch (error) {
+            return handleError(c, error, runtime.logger);
+        }
+    });
+
+    /**
+     * 删除 proxy-provider 配置。
+     */
+    app.delete('/api/proxy-providers/:id', requireAuth, async (c) => {
+        try {
+            const svc = services.proxyProvider;
+            if (!svc) throw new MissingDependencyError('Proxy Provider 服务需要 KV 存储');
+            await svc.remove(c.req.param('id') || '');
+            return c.json({ ok: true });
+        } catch (error) {
+            return handleError(c, error, runtime.logger);
+        }
+    });
+
+    // ===== 临时订阅 =====
+
+    /**
+     * 创建临时订阅。
+     * Body: { proxies: any[], max_access?: number, expire_seconds?: number }
+     * 返回 { id, url, max_access, expire_at }
+     */
+    app.post('/api/temp-subscriptions', requireAuth, async (c) => {
+        try {
+            const body = await c.req.json().catch(() => ({}));
+            const svc = services.tempSubs;
+            if (!svc) throw new MissingDependencyError('临时订阅服务需要 KV 存储');
+            if (!Array.isArray(body.proxies) || body.proxies.length === 0) {
+                throw new InvalidPayloadError('proxies 不能为空');
+            }
+            const created = await svc.create(
+                body.proxies,
+                Number(body.max_access) || 0,
+                Number(body.expire_seconds) || 0
+            );
+            const origin = new URL(c.req.url).origin;
+            return c.json({
+                id: created.id,
+                url: `${origin}/t/${created.id}`,
+                max_access: created.maxAccess,
+                expire_at: new Date(created.expireAt).toISOString()
+            }, 201);
+        } catch (error) {
+            return handleError(c, error, runtime.logger);
+        }
+    });
+
+    /**
+     * 访问临时订阅：输出 Clash proxies YAML。
+     * 限次/限时，UA 校验只放行 Mihomo 系客户端。
+     */
+    app.get('/t/:id', async (c) => {
+        try {
+            const userAgent = String(getRequestHeader(c.req, 'User-Agent') || '').toLowerCase();
+            if (!userAgent.includes('clashmetaforandroid') && !userAgent.includes('mihomo')) {
+                throw new ServiceError('仅允许 Mihomo 系客户端访问临时订阅', 403);
+            }
+
+            const svc = services.tempSubs;
+            if (!svc) throw new MissingDependencyError('临时订阅服务需要 KV 存储');
+            const proxies = await svc.access(c.req.param('id') || '');
+            if (!proxies) {
+                throw new ServiceError('订阅不存在、已过期或已达访问上限', 404);
+            }
+
+            // 输出 proxies YAML 段
+            const yamlText = yaml.dump({ proxies }, { lineWidth: -1, noRefs: true });
+            return c.text(yamlText, 200, {
+                'Content-Type': 'text/yaml; charset=utf-8',
+                'Cache-Control': 'no-store'
             });
         } catch (error) {
             return handleError(c, error, runtime.logger);
