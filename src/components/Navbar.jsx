@@ -32,7 +32,7 @@ export const Navbar = () => {
             {NAV.map((item) => (
               <button
                 type="button"
-                class="inline-flex items-center gap-2 py-1.5 px-3 rounded-lg text-xs font-medium transition-all"
+                class="inline-flex items-center gap-2 py-1.5 px-3.5 rounded-lg text-sm font-medium transition-all"
                 data-page={item.id}
                 x-on:click="setPage($el.dataset.page)"
                 x-bind:class={`page === "${item.id}" ? "bg-[var(--card)] text-[var(--primary)] shadow-xs font-semibold" : "text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--card)]/50"`}
@@ -48,10 +48,10 @@ export const Navbar = () => {
             {NAV.map((item) => (
               <button
                 type="button"
-                class="inline-flex items-center justify-center h-8 w-8 rounded-md text-xs transition-all"
+                class="inline-flex items-center justify-center h-8.5 w-8.5 rounded-md text-sm transition-all"
                 data-page={item.id}
                 x-on:click="setPage($el.dataset.page)"
-                x-bind:class={`page === "${item.id}" ? "bg-[var(--card)] text-[var(--primary)] shadow-xs" : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"`}
+                x-bind:class={`page === "${item.id}" ? "bg-[var(--card)] text-[var(--primary)] shadow-xs font-semibold" : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"`}
                 title={item.label}
                 aria-label={item.label}
               >
@@ -64,20 +64,20 @@ export const Navbar = () => {
         <div class="flex items-center gap-2 sm:gap-2.5">
           {/* Node Count Indicator */}
           <div
-            class="hidden sm:inline-flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 rounded-full bg-[var(--secondary)] border border-[var(--border)] text-[var(--muted-foreground)]"
+            class="hidden sm:inline-flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 rounded-full bg-[var(--secondary)] border border-[var(--border)] text-[var(--foreground)] font-medium"
             x-show="$store.auth.authenticated && $store.auth.nodeCount"
           >
             <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
             <span x-text="($store.auth.nodeCount || 0) + ' 节点'"></span>
           </div>
 
-          <span class="hidden lg:inline text-[11px] font-mono text-[var(--muted-foreground)] opacity-70">v{APP_VERSION}</span>
+          <span class="hidden lg:inline text-xs font-mono text-[var(--muted-foreground)]">v{APP_VERSION}</span>
 
           {/* Logout */}
           <template x-if="$store.auth.authenticated && $store.auth.authRequired">
             <button
               type="button"
-              class="h-8.5 w-8.5 inline-flex items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--secondary)] hover:text-red-500 transition-colors text-xs"
+              class="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--secondary)] hover:text-red-500 transition-colors text-sm"
               x-on:click="$store.auth.logout()"
               title="退出登录"
             >
@@ -90,7 +90,7 @@ export const Navbar = () => {
             href={GITHUB_REPO}
             target="_blank"
             rel="noopener noreferrer"
-            class="h-8.5 w-8.5 hidden sm:inline-flex items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--secondary)] transition-colors text-xs text-[var(--foreground)]"
+            class="h-9 w-9 hidden sm:inline-flex items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--secondary)] transition-colors text-sm text-[var(--foreground)]"
             title="GitHub 仓库"
           >
             <i class="fab fa-github"></i>
@@ -99,7 +99,7 @@ export const Navbar = () => {
           {/* Dark Mode Toggle */}
           <button
             type="button"
-            class="h-8.5 w-8.5 inline-flex items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--secondary)] transition-colors text-xs text-[var(--foreground)]"
+            class="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--secondary)] transition-colors text-sm text-[var(--foreground)]"
             x-on:click="toggleDarkMode()"
             title="切换暗色/亮色主题"
           >

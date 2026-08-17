@@ -405,8 +405,8 @@ export const Layout = (props) => {
             display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem;
             border: 1px solid transparent;
             border-radius: var(--radius-sm);
-            font-size: 0.875rem; font-weight: 500;
-            padding: 0.45rem 0.95rem; white-space: nowrap;
+            font-size: 0.9375rem; font-weight: 500;
+            padding: 0.5rem 1rem; white-space: nowrap;
             transition: all 0.15s ease;
           }
           .pixel-button:active:not(:disabled), .mm-btn:active:not(:disabled) {
@@ -453,10 +453,10 @@ export const Layout = (props) => {
           }
 
           .mm-btn-icon { width: 2.25rem; height: 2.25rem; padding: 0; }
-          .mm-btn-sm { height: 2rem; padding: 0.25rem 0.75rem; font-size: 0.8125rem; gap: 0.35rem; }
+          .mm-btn-sm { height: 2.125rem; padding: 0.3rem 0.8rem; font-size: 0.875rem; gap: 0.35rem; }
           .mm-btn-nav {
             height: 2.25rem; padding: 0.35rem 0.85rem;
-            font-size: 0.8125rem; font-weight: 500;
+            font-size: 0.875rem; font-weight: 500;
             border-radius: var(--radius-md);
           }
           .mm-btn-nav.is-active {
@@ -472,8 +472,8 @@ export const Layout = (props) => {
             background: var(--card);
             color: var(--foreground);
             border-radius: var(--radius-sm);
-            padding: 0.5rem 0.75rem;
-            font-size: 0.875rem;
+            padding: 0.55rem 0.85rem;
+            font-size: 0.9375rem;
             transition: border-color 0.15s ease, box-shadow 0.15s ease;
           }
           .mm-textarea { resize: vertical; min-height: 6rem; line-height: 1.5; }
@@ -482,8 +482,8 @@ export const Layout = (props) => {
             border-color: var(--primary);
             box-shadow: 0 0 0 3px var(--ring);
           }
-          .mm-label { display: block; font-size: 0.8125rem; font-weight: 500; margin-bottom: 0.35rem; color: var(--foreground); }
-          .mm-desc, .text-muted { color: var(--muted-foreground); font-size: 0.8125rem; line-height: 1.45; }
+          .mm-label { display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.35rem; color: var(--foreground); }
+          .mm-desc, .text-muted { color: var(--muted-foreground); font-size: 0.875rem; line-height: 1.5; }
 
           /* Chips & Badges */
           .mm-chip {
@@ -492,29 +492,29 @@ export const Layout = (props) => {
             background: var(--secondary);
             color: var(--muted-foreground);
             border-radius: var(--radius-sm);
-            padding: 0.15rem 0.45rem; font-size: 0.7rem; font-weight: 600;
+            padding: 0.15rem 0.5rem; font-size: 0.75rem; font-weight: 600;
           }
 
           /* Switch */
           .mm-switch {
-            position: relative; width: 2.25rem; height: 1.25rem; border-radius: 9999px;
+            position: relative; width: 2.35rem; height: 1.3rem; border-radius: 9999px;
             background: var(--muted); flex-shrink: 0;
             border: 1px solid var(--border);
             transition: background-color 0.2s ease, border-color 0.2s ease;
           }
           .peer:checked ~ .mm-switch { background: var(--primary); border-color: var(--primary); }
           .mm-switch::after {
-            content: ''; position: absolute; top: 2px; left: 2px; width: 0.9rem; height: 0.9rem;
+            content: ''; position: absolute; top: 2px; left: 2px; width: 0.95rem; height: 0.95rem;
             border-radius: 9999px;
             background: #ffffff; box-shadow: 0 1px 2px rgba(0,0,0,0.2); transition: transform 0.2s ease;
           }
-          .peer:checked ~ .mm-switch::after { transform: translateX(1rem); }
-          .mm-check { width: 1rem; height: 1rem; border-radius: var(--radius-sm); accent-color: var(--primary); }
+          .peer:checked ~ .mm-switch::after { transform: translateX(1.05rem); }
+          .mm-check { width: 1.05rem; height: 1.05rem; border-radius: var(--radius-sm); accent-color: var(--primary); }
 
           /* Card Layouts */
           .card-header { display: flex; flex-direction: column; gap: 0.25rem; padding: 1.25rem 1.5rem; }
-          .card-title { font-size: 1rem; font-weight: 600; line-height: 1.35; color: var(--foreground); }
-          .card-desc { color: var(--muted-foreground); font-size: 0.8125rem; }
+          .card-title { font-size: 1.0625rem; font-weight: 600; line-height: 1.35; color: var(--foreground); }
+          .card-desc { color: var(--muted-foreground); font-size: 0.875rem; }
           .card-content { padding: 1.25rem 1.5rem 1.5rem; }
           .pixel-text { font-weight: 700; }
         </style>

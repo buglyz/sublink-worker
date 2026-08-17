@@ -23,9 +23,9 @@ export const UpdateChecker = () => {
             <i class="fas fa-arrow-up"></i>
           </div>
           <div class="min-w-0 flex-1">
-            <div class="flex flex-wrap items-center gap-2 text-xs font-semibold text-[var(--foreground)]">
+            <div class="flex flex-wrap items-center gap-2 text-sm font-semibold text-[var(--foreground)]">
               <span x-text="i18n.newVersionAvailable"></span>
-              <span class="font-mono text-[10px] mm-chip" x-text="'v' + latestVersion"></span>
+              <span class="font-mono text-xs mm-chip" x-text="'v' + latestVersion"></span>
             </div>
             <div class="mt-2 flex flex-wrap items-center gap-2 text-xs">
               <a href={releaseUrl} target="_blank" rel="noopener noreferrer" class="font-medium text-[var(--primary)] hover:underline">
@@ -42,7 +42,7 @@ export const UpdateChecker = () => {
             </div>
           </div>
           <button type="button" x-on:click="dismissUpdate()" class="text-[var(--muted-foreground)] hover:text-[var(--foreground)] p-1 transition-colors" aria-label="Close">
-            <i class="fas fa-times text-xs"></i>
+            <i class="fas fa-times text-sm"></i>
           </button>
         </div>
       </div>

@@ -22,10 +22,10 @@ export const SubscribeLinks = (props) => {
         {t('subscriptionLinks')}
       </h2>
 
-      <div class="space-y-3">
+      <div class="space-y-3.5">
         {fields.map((field) => (
-          <div class="space-y-1" key={field.key}>
-            <label class="block text-xs font-medium text-[var(--muted-foreground)]">
+          <div class="space-y-1.5" key={field.key}>
+            <label class="block text-sm font-medium text-[var(--foreground)]">
               {field.label}
             </label>
             <div class="flex gap-2">
@@ -33,12 +33,12 @@ export const SubscribeLinks = (props) => {
                 type="text"
                 readonly
                 value={field.value}
-                class="w-full px-3 py-2 rounded-lg border border-[var(--input)] bg-[var(--secondary)] text-[var(--foreground)] font-mono text-xs focus:outline-none"
+                class="w-full px-3.5 py-2.5 rounded-lg border border-[var(--input)] bg-[var(--secondary)] text-[var(--foreground)] font-mono text-sm focus:outline-none"
               />
               <button
                 type="button"
                 x-on:click={`navigator.clipboard.writeText('${field.value}'); copied = '${field.key}'; setTimeout(() => copied = null, 2000)`}
-                class="px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--secondary)] text-[var(--foreground)] transition-all min-w-[2.5rem] flex items-center justify-center text-xs"
+                class="px-3.5 py-2.5 rounded-lg border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--secondary)] text-[var(--foreground)] transition-all min-w-[2.75rem] flex items-center justify-center text-sm"
                 x-bind:class={`{'!border-emerald-500 !bg-emerald-500/10 text-emerald-600 dark:text-emerald-400': copied === '${field.key}'}`}
               >
                 <i class="fas" x-bind:class={`copied === '${field.key}' ? 'fa-check text-emerald-500' : 'fa-copy'`}></i>

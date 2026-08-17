@@ -729,25 +729,25 @@ export const NodeLibrary = (props) => {
         <div class="border-b border-[var(--border)] px-5 py-4 bg-[var(--secondary)]/30">
           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <div class="font-semibold text-sm text-[var(--foreground)] flex items-center gap-2">
-                <i class="fas fa-network-wired text-[var(--primary)] text-xs"></i>
+              <div class="font-semibold text-base text-[var(--foreground)] flex items-center gap-2">
+                <i class="fas fa-network-wired text-[var(--primary)] text-sm"></i>
                 <span>节点库管理</span>
-                <span class="font-mono text-xs text-[var(--primary)] font-normal" x-text="'(' + nodes.length + ' 节点 · 选中 ' + selectedCount + ')'"></span>
+                <span class="font-mono text-sm text-[var(--primary)] font-normal" x-text="'(' + nodes.length + ' 节点 · 选中 ' + selectedCount + ')'"></span>
               </div>
-              <p class="text-xs text-[var(--muted-foreground)] mt-0.5">
+              <p class="text-sm text-[var(--muted-foreground)] mt-0.5">
                 节点自动同步至云端 KV
-                <span class="ml-1 text-emerald-500 font-medium text-[11px]" x-show="saving" x-cloak>• 同步中…</span>
+                <span class="ml-1 text-emerald-500 font-medium text-xs" x-show="saving" x-cloak>• 同步中…</span>
               </p>
             </div>
             <div class="flex flex-wrap gap-1.5">
               <button type="button" class="mm-btn mm-btn-outline mm-btn-sm text-xs" x-on:click="loadFromServer()">
-                <i class="fas fa-rotate text-[10px]"></i> 刷新
+                <i class="fas fa-rotate text-xs"></i> 刷新
               </button>
               <button type="button" class="mm-btn mm-btn-outline mm-btn-sm text-xs" x-on:click="importFromInput()">
-                <i class="fas fa-file-import text-[10px]"></i> 从输入源导入
+                <i class="fas fa-file-import text-xs"></i> 从输入源导入
               </button>
               <button type="button" class="mm-btn mm-btn-primary mm-btn-sm text-xs" x-on:click="applyToConverter({ convert: true })" x-bind:disabled="selectedCount === 0">
-                <i class="fas fa-bolt text-[10px]"></i> 用选中生成
+                <i class="fas fa-bolt text-xs"></i> 用选中生成
               </button>
             </div>
           </div>
@@ -759,7 +759,7 @@ export const NodeLibrary = (props) => {
             {/* Left: Paste & Remote URL */}
             <div class="lg:col-span-3 space-y-3">
               <div>
-                <label class="block text-xs font-semibold text-[var(--foreground)] mb-1">粘贴节点分享链接</label>
+                <label class="block text-sm font-semibold text-[var(--foreground)] mb-1">粘贴节点分享链接</label>
                 <textarea
                   x-model="pasteBox"
                   rows={3}
@@ -768,9 +768,9 @@ export const NodeLibrary = (props) => {
                 ></textarea>
               </div>
               <div class="space-y-2">
-                <label class="block text-xs font-semibold text-[var(--foreground)]">远程订阅 URL</label>
+                <label class="block text-sm font-semibold text-[var(--foreground)]">远程订阅 URL</label>
                 <div class="flex gap-2">
-                  <input type="url" class="mm-input font-mono text-xs flex-1" x-model="remoteUrl" placeholder="https://example.com/sub" />
+                  <input type="url" class="mm-input font-mono text-sm flex-1" x-model="remoteUrl" placeholder="https://example.com/sub" />
                   <button type="button" class="mm-btn mm-btn-secondary mm-btn-sm text-xs shrink-0" x-on:click="importRemoteUrl()" x-bind:disabled="importing">
                     <i class="fas" x-bind:class={'importing ? "fa-spinner fa-spin" : "fa-cloud-arrow-down"'}></i>
                     <span x-text={'importing ? "拉取中…" : "拉取导入"'}></span>
@@ -788,22 +788,22 @@ export const NodeLibrary = (props) => {
                 </div>
 
                 {/* Import Report Bubble */}
-                <div class="rounded-xl border border-[var(--border)] bg-[var(--secondary)]/40 p-3 text-xs space-y-1" x-show="importReport" x-cloak>
+                <div class="rounded-xl border border-[var(--border)] bg-[var(--secondary)]/40 p-3.5 text-xs space-y-1" x-show="importReport" x-cloak>
                   <template x-if="importReport && importReport.error">
                     <p class="text-red-500 font-medium" x-text="importReport.error"></p>
                   </template>
                   <template x-if="importReport && !importReport.error">
                     <div class="space-y-1">
-                      <p class="font-medium text-[var(--foreground)]" x-text="importReport.message"></p>
-                      <p class="text-[var(--muted-foreground)] text-[11px]">
+                      <p class="font-semibold text-sm text-[var(--foreground)]" x-text="importReport.message"></p>
+                      <p class="text-[var(--muted-foreground)] text-xs">
                         解析 <span x-text="importReport.parsed"></span>
                         · 新增 <span class="text-emerald-500 font-semibold" x-text="importReport.added"></span>
                         · 更新 <span class="text-amber-500 font-semibold" x-text="importReport.updated"></span>
                         · 移除 <span class="text-red-500 font-semibold" x-text="importReport.removed"></span>
                         · 跳过 <span x-text="importReport.skipped"></span>
-                        · 格式 <span class="font-mono uppercase" x-text="importReport.format"></span>
+                        · 格式 <span class="font-mono uppercase font-semibold" x-text="importReport.format"></span>
                       </p>
-                      <p class="text-[var(--muted-foreground)] font-mono text-[10px] truncate" x-show="importReport.source" x-text="importReport.source"></p>
+                      <p class="text-[var(--muted-foreground)] font-mono text-xs truncate" x-show="importReport.source" x-text="importReport.source"></p>
                     </div>
                   </template>
                 </div>
@@ -811,14 +811,14 @@ export const NodeLibrary = (props) => {
             </div>
 
             {/* Right: Search & Actions */}
-            <div class="lg:col-span-2 flex flex-col justify-between gap-3 p-3.5 rounded-xl border border-[var(--border)] bg-[var(--secondary)]/20">
+            <div class="lg:col-span-2 flex flex-col justify-between gap-3 p-4 rounded-xl border border-[var(--border)] bg-[var(--secondary)]/20">
               <div class="space-y-2">
-                <label class="block text-xs font-semibold text-[var(--foreground)]">筛选节点</label>
-                <input type="search" x-model="filter" class="mm-input text-xs" placeholder="按名称 / 协议 / 标签搜索…" />
+                <label class="block text-sm font-semibold text-[var(--foreground)]">筛选节点</label>
+                <input type="search" x-model="filter" class="mm-input text-sm" placeholder="按名称 / 协议 / 标签搜索…" />
               </div>
               <div class="flex flex-col gap-2 pt-2 border-t border-[var(--border)]">
-                <button type="button" class="mm-btn mm-btn-primary w-full text-xs py-2" x-on:click="importFromPaste()" x-bind:disabled="importing">
-                  <i class="fas fa-plus text-[10px]"></i> 保存到节点库
+                <button type="button" class="mm-btn mm-btn-primary w-full text-sm py-2 font-medium" x-on:click="importFromPaste()" x-bind:disabled="importing">
+                  <i class="fas fa-plus text-xs"></i> 保存到节点库
                 </button>
                 <div class="grid grid-cols-2 gap-1.5">
                   <button type="button" class="mm-btn mm-btn-outline text-xs py-1.5" x-on:click="applyToConverter({ convert: false })" x-bind:disabled="selectedCount === 0">
@@ -833,8 +833,8 @@ export const NodeLibrary = (props) => {
           </div>
 
           {/* List Controls */}
-          <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--muted-foreground)] pt-2 border-t border-[var(--border)]">
-            <div class="flex items-center gap-3">
+          <div class="flex flex-wrap items-center justify-between gap-2 text-sm text-[var(--muted-foreground)] pt-2 border-t border-[var(--border)]">
+            <div class="flex items-center gap-3.5">
               <label class="inline-flex items-center gap-1.5 cursor-pointer font-medium text-[var(--foreground)]">
                 <input type="checkbox" class="mm-check" x-bind:checked="selectAll" x-on:change="toggleSelectAll()" />
                 全选当前列表
@@ -846,39 +846,39 @@ export const NodeLibrary = (props) => {
                 清空全库
               </button>
             </div>
-            <span class="text-xs text-[var(--primary)] font-medium" x-show="flash" x-text="flash"></span>
+            <span class="text-sm text-[var(--primary)] font-medium" x-show="flash" x-text="flash"></span>
           </div>
 
           {/* Table Container */}
           <div class="rounded-xl border border-[var(--border)] overflow-hidden bg-[var(--card)]">
             <div class="max-h-[26rem] overflow-auto">
               <template x-if="filtered.length === 0">
-                <div class="px-4 py-12 text-center text-xs text-[var(--muted-foreground)] space-y-1.5">
-                  <div class="text-sm font-semibold text-[var(--foreground)]">暂无节点</div>
+                <div class="px-4 py-12 text-center text-sm text-[var(--muted-foreground)] space-y-1.5">
+                  <div class="text-base font-semibold text-[var(--foreground)]">暂无节点</div>
                   <p>粘贴分享链接点击「保存到节点库」，或输入远程订阅 URL 点击「拉取导入」</p>
                 </div>
               </template>
-              <table class="w-full text-xs" x-show="filtered.length > 0">
-                <thead class="sticky top-0 bg-[var(--secondary)]/80 backdrop-blur-sm text-[var(--muted-foreground)] text-[11px] uppercase tracking-wider font-semibold border-b border-[var(--border)] z-10">
+              <table class="w-full text-sm" x-show="filtered.length > 0">
+                <thead class="sticky top-0 bg-[var(--secondary)]/80 backdrop-blur-sm text-[var(--muted-foreground)] text-xs uppercase tracking-wider font-semibold border-b border-[var(--border)] z-10">
                   <tr>
-                    <th class="w-10 px-3 py-2.5 text-left"></th>
-                    <th class="px-3 py-2.5 text-left">名称</th>
-                    <th class="px-3 py-2.5 text-left hidden sm:table-cell">协议</th>
-                    <th class="px-3 py-2.5 text-left hidden md:table-cell">状态</th>
-                    <th class="w-16 px-3 py-2.5 text-right">操作</th>
+                    <th class="w-10 px-3.5 py-2.5 text-left"></th>
+                    <th class="px-3.5 py-2.5 text-left">名称</th>
+                    <th class="px-3.5 py-2.5 text-left hidden sm:table-cell">协议</th>
+                    <th class="px-3.5 py-2.5 text-left hidden md:table-cell">状态</th>
+                    <th class="w-16 px-3.5 py-2.5 text-right">操作</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-[var(--border)]">
                   <template x-for="node in filtered" x-bind:key="node.id">
                     <tr class="hover:bg-[var(--secondary)]/40 transition-colors" x-bind:class={'node.enabled === false ? "opacity-40" : ""'}>
-                      <td class="px-3 py-2.5">
+                      <td class="px-3.5 py-2.5">
                         <input type="checkbox" class="mm-check" x-model="node.selected" />
                       </td>
-                      <td class="px-3 py-2.5 min-w-0">
+                      <td class="px-3.5 py-2.5 min-w-0">
                         <template x-if="editingId !== node.id">
                           <button
                             type="button"
-                            class="text-left font-medium text-[var(--foreground)] hover:text-[var(--primary)] truncate max-w-[14rem] sm:max-w-xs block transition-colors"
+                            class="text-left font-medium text-[var(--foreground)] hover:text-[var(--primary)] truncate max-w-[14rem] sm:max-w-xs block transition-colors text-sm"
                             x-text="node.name"
                             x-on:click="startEdit(node)"
                             title="点击修改名称"
@@ -887,7 +887,7 @@ export const NodeLibrary = (props) => {
                         <template x-if="editingId === node.id">
                           <input
                             type="text"
-                            class="mm-input py-1 text-xs max-w-xs"
+                            class="mm-input py-1 text-sm max-w-xs"
                             x-model="editName"
                             {...{
                               'x-on:keydown.enter.prevent': 'commitEdit(node)',
@@ -897,20 +897,20 @@ export const NodeLibrary = (props) => {
                             }}
                           />
                         </template>
-                        <div class="font-mono text-[10px] text-[var(--muted-foreground)] truncate max-w-[14rem] sm:max-w-md mt-0.5" x-text="node.raw"></div>
+                        <div class="font-mono text-xs text-[var(--muted-foreground)] truncate max-w-[14rem] sm:max-w-md mt-0.5" x-text="node.raw"></div>
                       </td>
-                      <td class="px-3 py-2.5 hidden sm:table-cell">
-                        <span class="inline-flex rounded px-1.5 py-0.5 text-[10px] font-mono uppercase font-medium bg-[var(--secondary)] border border-[var(--border)]" x-text="node.protocol || '?'"></span>
+                      <td class="px-3.5 py-2.5 hidden sm:table-cell">
+                        <span class="inline-flex rounded px-2 py-0.5 text-xs font-mono uppercase font-medium bg-[var(--secondary)] border border-[var(--border)]" x-text="node.protocol || '?'"></span>
                       </td>
-                      <td class="px-3 py-2.5 hidden md:table-cell">
+                      <td class="px-3.5 py-2.5 hidden md:table-cell">
                         <label class="relative inline-flex cursor-pointer">
                           <input type="checkbox" class="sr-only peer" x-model="node.enabled" />
                           <span class="mm-switch scale-90 origin-left"></span>
                         </label>
                       </td>
-                      <td class="px-3 py-2.5 text-right">
-                        <button type="button" class="h-7 w-7 inline-flex items-center justify-center rounded-lg text-[var(--muted-foreground)] hover:text-red-500 hover:bg-red-500/10 transition-colors" title="删除" x-on:click="removeOne(node.id)">
-                          <i class="fas fa-trash-alt text-xs"></i>
+                      <td class="px-3.5 py-2.5 text-right">
+                        <button type="button" class="h-8 w-8 inline-flex items-center justify-center rounded-lg text-[var(--muted-foreground)] hover:text-red-500 hover:bg-red-500/10 transition-colors text-sm" title="删除" x-on:click="removeOne(node.id)">
+                          <i class="fas fa-trash-alt"></i>
                         </button>
                       </td>
                     </tr>
