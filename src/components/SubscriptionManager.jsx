@@ -67,6 +67,9 @@ export const SubscriptionManager = () => {
           window.addEventListener('sublink-page', (e) => {
             if (e.detail && e.detail.page === 'subs') self.reload();
           });
+          window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && self.formatModal) self.closeFormatModal();
+          });
           await this.reload();
         },
         async reload() {
@@ -439,7 +442,6 @@ export const SubscriptionManager = () => {
         x-show="formatModal"
         x-cloak
         class="fixed inset-0 z-[9999] flex items-center justify-center p-4"
-        x-on:keydown.escape.window="closeFormatModal()"
       >
         <div
           class="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
@@ -447,7 +449,7 @@ export const SubscriptionManager = () => {
         ></div>
         <div
           class="relative z-10 w-full max-w-sm border-2 border-[var(--border)] bg-[var(--card)] text-[var(--card-foreground)] shadow-2xl p-4 space-y-3"
-          x-on:click.stop
+          x-on:click="$event.stopPropagation()"
         >
           <div class="flex items-center justify-between border-b border-[var(--border)] pb-2">
             <div class="font-semibold text-sm flex items-center gap-1.5">
