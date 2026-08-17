@@ -519,9 +519,5 @@ export const SubscriptionManager = () => {
       <script dangerouslySetInnerHTML={{ __html: scriptContent }} />
     </div>
   );
-
-      <script dangerouslySetInnerHTML={{ __html: scriptContent }} />
-    </div>
-  );
 };
 
