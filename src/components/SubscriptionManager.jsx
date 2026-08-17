@@ -8,12 +8,13 @@
 export const SubscriptionManager = () => {
   // Static format list rendered server-side; avoids Alpine x-for runtime binding.
   // Kept to the most common targets; singbox/xray are real formats on /subscribe.
+  // Auto detects target from the requesting client's User-Agent.
   const copyFormats = [
     { key: 'clash', label: 'Clash', target: 'clash' },
     { key: 'singbox', label: 'Sing-box', target: 'singbox' },
     { key: 'xray', label: 'Xray', target: 'xray' },
     { key: 'surge', label: 'Surge', target: 'surge', ua: 'surge' },
-    { key: 'auto', label: 'Auto', target: 'base64' }
+    { key: 'auto', label: 'Auto', target: 'auto' }
   ];
   const scriptContent = `
     function subscriptionManagerData() {
@@ -34,7 +35,7 @@ export const SubscriptionManager = () => {
           { key: 'singbox', label: 'Sing-box', target: 'singbox' },
           { key: 'xray', label: 'Xray', target: 'xray' },
           { key: 'surge', label: 'Surge', target: 'surge', ua: 'surge' },
-          { key: 'auto', label: 'Auto', target: 'base64' }
+          { key: 'auto', label: 'Auto', target: 'auto' }
         ],
 
         token() {
@@ -244,14 +245,9 @@ export const SubscriptionManager = () => {
           if (!item) return '';
           const base = item.url || (window.location.origin + '/subscribe/' + encodeURIComponent(item.slug || ''));
           const u = new URL(base, window.location.origin);
-          if (!format || format.key === 'auto') {
-            u.searchParams.set('format', 'base64');
-            u.searchParams.delete('ua');
-            return u.toString();
-          }
-          const target = format.target || 'clash';
+          const target = (format && format.target) || 'clash';
           u.searchParams.set('format', target);
-          if (format.ua) {
+          if (format && format.ua) {
             u.searchParams.set('ua', decodeURIComponent(format.ua));
           } else {
             u.searchParams.delete('ua');

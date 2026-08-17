@@ -487,16 +487,16 @@ export function createApp(bindings = {}) {
             throw new ServiceError('该订阅未包含可用节点，请先在订阅管理中添加节点', 404);
         }
 
-        const format = String(c.req.query('format') || c.req.query('target') || 'clash').toLowerCase();
+        const requestedFormat = String(c.req.query('format') || c.req.query('target') || 'clash').toLowerCase();
         const joined = lines.join('\n');
 
-        if (format === 'raw' || format === 'uri' || format === 'text') {
+        if (requestedFormat === 'raw' || requestedFormat === 'uri' || requestedFormat === 'text') {
             return c.text(joined, 200, {
                 'Content-Type': 'text/plain; charset=utf-8',
                 ...PUBLIC_SUB_CACHE_HEADERS
             });
         }
-        if (format === 'base64' || format === 'b64' || format === 'v2ray') {
+        if (requestedFormat === 'base64' || requestedFormat === 'b64' || requestedFormat === 'v2ray') {
             return c.text(encodeBase64(joined), 200, {
                 'Content-Type': 'text/plain; charset=utf-8',
                 ...PUBLIC_SUB_CACHE_HEADERS
@@ -505,6 +505,19 @@ export function createApp(bindings = {}) {
 
         const lang = resolveLanguage(c.get('lang') || c.req.query('lang'));
         const ua = c.req.query('ua') || getRequestHeader(c.req, 'User-Agent') || DEFAULT_USER_AGENT;
+
+        // Auto: detect target format from client User-Agent, then fall through to the matched branch.
+        // base64 clients (quantumult, unknown) are handled here directly to avoid re-running builders.
+        let format = requestedFormat;
+        if (requestedFormat === 'auto') {
+            format = detectClientFormat(getRequestHeader(c.req, 'User-Agent'));
+            if (format === 'base64') {
+                return c.text(encodeBase64(joined), 200, {
+                    'Content-Type': 'text/plain; charset=utf-8',
+                    ...PUBLIC_SUB_CACHE_HEADERS
+                });
+            }
+        }
 
         // Sing-box output (mirror of /singbox endpoint)
         if (format === 'singbox' || format === 'sing-box' || format === 'sb') {
@@ -1417,6 +1430,35 @@ function isSingboxModernConfig(version) {
 function resolveSingboxConfigTier(version) {
     if (isSingboxLegacyConfig(version)) return '1.11';
     return isSingboxModernConfig(version) ? '1.14' : '1.12';
+}
+
+// Detect target client format from User-Agent for Auto mode.
+// Order matters: more specific clients checked first.
+function detectClientFormat(userAgent) {
+    const ua = String(userAgent || '').toLowerCase();
+    if (!ua) return 'base64';
+
+    // Sing-box family (SFA/SFI/SFM apps or sing-box core)
+    if (ua.includes('sing-box') || /\bsf[aim]\b/.test(ua)) return 'singbox';
+
+    // Surge / Surfboard family
+    if (ua.includes('surge')) return 'surge';
+    if (ua.includes('surfboard')) return 'surge';
+
+    // Clash / mihomo family (clash, clashx, clash-verge, stash, clashmeta, mihomo)
+    if (ua.includes('clash') || ua.includes('mihomo') || ua.includes('stash')) return 'clash';
+
+    // Xray / V2Ray family
+    if (ua.includes('xray') || ua.includes('v2ray')) return 'xray';
+
+    // QuantumultX reads base64 node lists
+    if (ua.includes('quantumult')) return 'base64';
+
+    // Loon reads clash yaml
+    if (ua.includes('loon')) return 'clash';
+
+    // Unknown client: safest universal fallback
+    return 'base64';
 }
 
 function resolveSingboxConfigVersion(requestedVersion, userAgent) {
