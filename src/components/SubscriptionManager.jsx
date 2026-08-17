@@ -412,7 +412,7 @@ export const SubscriptionManager = () => {
                   the next item's border. */}
               <div x-show="menuOpen" x-cloak x-bind:style="menuStyle" class="fixed z-[9999] w-44 bg-white dark:bg-zinc-900 border border-[var(--border)] rounded-lg shadow-2xl max-h-72 overflow-auto">
                 {copyFormats.map((fmt) => (
-                  <button type="button" class="w-full text-left px-3 py-2 text-sm hover:bg-[var(--primary)]/10 dark:hover:bg-white/5 text-gray-700 dark:text-gray-300" x-on:click={`copyUrl(menuItem, ${JSON.stringify(fmt)}); menuOpen = false`}>
+                  <button type="button" class="w-full text-left px-3 py-2 text-sm hover:bg-[var(--primary)]/10 dark:hover:bg-white/5 text-gray-700 dark:text-gray-300" data-fmt={JSON.stringify(fmt)} x-on:click="copyUrl(menuItem, JSON.parse($el.dataset.fmt)); menuOpen = false">
                     {fmt.label}
                   </button>
                 ))}
