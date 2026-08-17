@@ -33,7 +33,9 @@ export const SubscriptionManager = () => {
         editing: null, // null | object being edited / created
         filter: '',
         nodeFilter: '',
-        openFormatId: null, // which item's format menu is open
+        menuOpen: false,
+        menuStyle: '',
+        menuItem: null, // current item for the open menu
 
         token() {
           try { return Alpine.store('auth').token || localStorage.getItem('sublink_auth_token') || ''; }
@@ -232,9 +234,22 @@ export const SubscriptionManager = () => {
           if (format.ua) u.searchParams.set('ua', format.ua);
           return u.toString();
         },
-        toggleFormatMenu(item) {
-          const id = item.id;
-          this.openFormatId = (this.openFormatId === id) ? null : id;
+        toggleFormatMenu(item, evt) {
+          if (this.menuOpen && this.menuItem?.id === item.id) {
+            this.menuOpen = false;
+            return;
+          }
+          const btn = evt?.currentTarget || event?.currentTarget;
+          if (btn) {
+            const r = btn.getBoundingClientRect();
+            // Position below button, right-aligned
+            const winW = window.innerWidth;
+            const menuW = 176; // w-44
+            const left = Math.min(r.left, winW - menuW - 8);
+            this.menuStyle = `left:${Math.max(8, left)}px;top:${r.bottom + 6}px;`;
+          }
+          this.menuItem = item;
+          this.menuOpen = true;
         }
       };
     }
@@ -380,26 +395,28 @@ export const SubscriptionManager = () => {
                     <button type="button" class="mm-btn mm-btn-primary mm-btn-sm rounded-r-none" x-on:click="copyDefault(item)">
                       <i class="fas fa-copy text-xs"></i> 复制
                     </button>
-                    <button type="button" class="mm-btn mm-btn-primary mm-btn-sm rounded-l-none px-2" style="margin-left: -1px;" x-on:click="toggleFormatMenu(item)" aria-label="选择格式">
-                      <i class="fas" x-bind:class="openFormatId === item.id ? 'fa-caret-up' : 'fa-caret-down'"></i>
+                    <button type="button" class="mm-btn mm-btn-primary mm-btn-sm rounded-l-none px-2" style="margin-left: -1px;" x-on:click="toggleFormatMenu(item, $event)" aria-label="选择格式">
+                      <i class="fas" x-bind:class="menuOpen && menuItem?.id === item.id ? 'fa-caret-up' : 'fa-caret-down'"></i>
                     </button>
                   </div>
                   <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-on:click="startEdit(item)">编辑</button>
                   <button type="button" class="mm-btn mm-btn-danger mm-btn-sm" x-on:click="removeItem(item)">删除</button>
                 </div>
               </div>
-              {/* Format menu: renders in normal flow (not absolute) to avoid stacking issues */}
-              <div x-show="openFormatId === item.id" x-cloak class="ml-auto w-fit max-w-full">
-                <div class="w-44 bg-white dark:bg-zinc-900 border border-[var(--border)] rounded-lg shadow-xl max-h-72 overflow-auto">
-                  {copyFormats.map((fmt) => (
-                    <button type="button" class="w-full text-left px-3 py-2 text-sm hover:bg-[var(--primary)]/10 dark:hover:bg-white/5 text-gray-700 dark:text-gray-300" x-on:click={`copyUrl(item, ${JSON.stringify(fmt)}); openFormatId = null`}>
-                      {fmt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
               </div>
             </template>
+              {/* Backdrop: closes the format menu when clicking outside */}
+              <div x-show="menuOpen" x-cloak x-on:click="menuOpen = false" class="fixed inset-0 z-[9998]"></div>
+              {/* Format menu: fixed-position popover outside x-for loop.
+                  fixed escapes .pixel-card's transform stacking context, so it never overlaps
+                  the next item's border. */}
+              <div x-show="menuOpen" x-cloak x-bind:style="menuStyle" class="fixed z-[9999] w-44 bg-white dark:bg-zinc-900 border border-[var(--border)] rounded-lg shadow-2xl max-h-72 overflow-auto">
+                {copyFormats.map((fmt) => (
+                  <button type="button" class="w-full text-left px-3 py-2 text-sm hover:bg-[var(--primary)]/10 dark:hover:bg-white/5 text-gray-700 dark:text-gray-300" x-on:click={`copyUrl(menuItem, ${JSON.stringify(fmt)}); menuOpen = false`}>
+                    {fmt.label}
+                  </button>
+                ))}
+              </div>
           </div>
         </div>
       </div>
