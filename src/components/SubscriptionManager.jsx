@@ -7,19 +7,13 @@
  */
 export const SubscriptionManager = () => {
   // Static format list rendered server-side; avoids Alpine x-for runtime binding.
+  // Kept to the most common targets; singbox/xray are real formats on /subscribe.
   const copyFormats = [
-    { key: 'auto', label: 'Auto', target: 'base64' },
     { key: 'clash', label: 'Clash', target: 'clash' },
-    { key: 'stash', label: 'Stash', target: 'clash', ua: 'stash/2.x' },
-    { key: 'shadowrocket', label: 'Shadowrocket', target: 'clash', ua: 'shadowrocket' },
-    { key: 'surfboard', label: 'Surfboard', target: 'surge', ua: 'surfboard' },
+    { key: 'singbox', label: 'Sing-box', target: 'singbox' },
+    { key: 'xray', label: 'Xray', target: 'xray' },
     { key: 'surge', label: 'Surge', target: 'surge', ua: 'surge' },
-    { key: 'surge-mac', label: 'Surge Mac', target: 'surge', ua: 'surge-mac' },
-    { key: 'clash-to-surge', label: 'Clash→Surge', target: 'surge' },
-    { key: 'loon', label: 'Loon', target: 'clash', ua: 'loon' },
-    { key: 'clash-to-loon', label: 'Clash→Loon', target: 'clash', ua: 'loon' },
-    { key: 'clash-to-loon-kelee', label: 'Clash→Loon(kelee)', target: 'clash', ua: 'loon' },
-    { key: 'quantumultx', label: 'QuantumultX', target: 'base64', ua: 'quantumult%20x' }
+    { key: 'auto', label: 'Auto', target: 'base64' }
   ];
   const scriptContent = `
     function subscriptionManagerData() {
@@ -36,18 +30,11 @@ export const SubscriptionManager = () => {
         formatModal: false,
         formatItem: null, // item whose format selector is open
         formats: [
-          { key: 'auto', label: 'Auto', target: 'base64' },
           { key: 'clash', label: 'Clash', target: 'clash' },
-          { key: 'stash', label: 'Stash', target: 'clash', ua: 'stash/2.x' },
-          { key: 'shadowrocket', label: 'Shadowrocket', target: 'clash', ua: 'shadowrocket' },
-          { key: 'surfboard', label: 'Surfboard', target: 'surge', ua: 'surfboard' },
+          { key: 'singbox', label: 'Sing-box', target: 'singbox' },
+          { key: 'xray', label: 'Xray', target: 'xray' },
           { key: 'surge', label: 'Surge', target: 'surge', ua: 'surge' },
-          { key: 'surge-mac', label: 'Surge Mac', target: 'surge', ua: 'surge-mac' },
-          { key: 'clash-to-surge', label: 'Clash→Surge', target: 'surge' },
-          { key: 'loon', label: 'Loon', target: 'clash', ua: 'loon' },
-          { key: 'clash-to-loon', label: 'Clash→Loon', target: 'clash', ua: 'loon' },
-          { key: 'clash-to-loon-kelee', label: 'Clash→Loon(kelee)', target: 'clash', ua: 'loon' },
-          { key: 'quantumultx', label: 'QuantumultX', target: 'base64', ua: 'quantumult%20x' }
+          { key: 'auto', label: 'Auto', target: 'base64' }
         ],
 
         token() {

@@ -505,6 +505,56 @@ export function createApp(bindings = {}) {
 
         const lang = resolveLanguage(c.get('lang') || c.req.query('lang'));
         const ua = c.req.query('ua') || getRequestHeader(c.req, 'User-Agent') || DEFAULT_USER_AGENT;
+
+        // Sing-box output (mirror of /singbox endpoint)
+        if (format === 'singbox' || format === 'sing-box' || format === 'sb') {
+            const requestUserAgent = getRequestHeader(c.req, 'User-Agent');
+            const singboxVersion = resolveSingboxConfigVersion(
+                c.req.query('singbox_version') || c.req.query('sb_version') || c.req.query('sb_ver'),
+                requestUserAgent
+            );
+            const baseConfig = singboxVersion === '1.11' ? SING_BOX_CONFIG_V1_11 : SING_BOX_CONFIG;
+            const selectedRules = resolveRulesPreference(
+                c.req.query('selectedRules'),
+                item.selectedRules
+            );
+            const customRules = resolveCustomRulesPreference(
+                c.req.query('customRules'),
+                item.customRules
+            );
+            const builder = new SingboxConfigBuilder(
+                joined,
+                selectedRules,
+                customRules,
+                baseConfig,
+                lang,
+                ua,
+                !!item.groupByCountry,
+                false,
+                undefined,
+                undefined,
+                singboxVersion,
+                item.includeAutoSelect !== false
+            );
+            await builder.build();
+            const headers = { 'Content-Type': 'application/json; charset=utf-8', ...PUBLIC_SUB_CACHE_HEADERS };
+            const userinfo = builder.getSubscriptionUserinfo();
+            if (userinfo) headers['subscription-userinfo'] = userinfo;
+            return c.json(builder.config, 200, headers);
+        }
+
+        // Xray output (mirror of /xray endpoint: Base64-encoded transparent lines)
+        if (format === 'xray' || format === 'x') {
+            const { lines: xrayLines, subscriptionUserinfo } = await resolveXraySubscriptionLines(joined, ua, runtime.logger);
+            const finalString = xrayLines.join('\n');
+            if (!finalString) {
+                throw new ServiceError('该订阅未包含可转换的节点', 422);
+            }
+            const headers = { 'Content-Type': 'text/plain; charset=utf-8', ...PUBLIC_SUB_CACHE_HEADERS };
+            if (subscriptionUserinfo) headers['subscription-userinfo'] = subscriptionUserinfo;
+            return c.text(encodeBase64(finalString), 200, headers);
+        }
+
         const templateId = (c.req.query('template') || item.template || '').trim();
 
         if (templateId || item.mode === 'template') {
