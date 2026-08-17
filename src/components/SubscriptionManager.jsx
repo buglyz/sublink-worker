@@ -6,6 +6,21 @@
  * Alpine script is embedded carefully to avoid template-literal regex breakage.
  */
 export const SubscriptionManager = () => {
+  // Static format list rendered server-side; avoids Alpine x-for runtime binding.
+  const copyFormats = [
+    { key: 'auto', label: 'Auto', target: 'base64' },
+    { key: 'clash', label: 'Clash', target: 'clash' },
+    { key: 'stash', label: 'Stash', target: 'clash', ua: 'stash/2.x' },
+    { key: 'shadowrocket', label: 'Shadowrocket', target: 'clash', ua: 'shadowrocket' },
+    { key: 'surfboard', label: 'Surfboard', target: 'surge', ua: 'surfboard' },
+    { key: 'surge', label: 'Surge', target: 'surge', ua: 'surge' },
+    { key: 'surge-mac', label: 'Surge Mac', target: 'surge', ua: 'surge-mac' },
+    { key: 'clash-to-surge', label: 'Clash→Surge', target: 'surge' },
+    { key: 'loon', label: 'Loon', target: 'clash', ua: 'loon' },
+    { key: 'clash-to-loon', label: 'Clash→Loon', target: 'clash', ua: 'loon' },
+    { key: 'clash-to-loon-kelee', label: 'Clash→Loon(kelee)', target: 'clash', ua: 'loon' },
+    { key: 'quantumultx', label: 'QuantumultX', target: 'base64', ua: 'quantumult%20x' }
+  ];
   const scriptContent = `
     function subscriptionManagerData() {
       return {
@@ -19,22 +34,6 @@ export const SubscriptionManager = () => {
         filter: '',
         nodeFilter: '',
         openFormatId: null, // which item's format menu is open
-        // Client format presets. Most are Clash/Surge variants — the client
-        // UA does the real work; we only set format + ua hint on the URL.
-        copyFormats: [
-          { key: 'auto', label: 'Auto', target: 'base64' },
-          { key: 'clash', label: 'Clash', target: 'clash' },
-          { key: 'stash', label: 'Stash', target: 'clash', ua: 'stash/2.x' },
-          { key: 'shadowrocket', label: 'Shadowrocket', target: 'clash', ua: 'shadowrocket' },
-          { key: 'surfboard', label: 'Surfboard', target: 'surge', ua: 'surfboard' },
-          { key: 'surge', label: 'Surge', target: 'surge', ua: 'surge' },
-          { key: 'surge-mac', label: 'Surge Mac', target: 'surge', ua: 'surge-mac' },
-          { key: 'clash-to-surge', label: 'Clash→Surge', target: 'surge' },
-          { key: 'loon', label: 'Loon', target: 'clash', ua: 'loon' },
-          { key: 'clash-to-loon', label: 'Clash→Loon', target: 'clash', ua: 'loon' },
-          { key: 'clash-to-loon-kelee', label: 'Clash→Loon(kelee)', target: 'clash', ua: 'loon' },
-          { key: 'quantumultx', label: 'QuantumultX', target: 'base64', ua: 'quantumult%20x' }
-        ],
 
         token() {
           try { return Alpine.store('auth').token || localStorage.getItem('sublink_auth_token') || ''; }
@@ -219,6 +218,9 @@ export const SubscriptionManager = () => {
           const url = this.buildSubscriptionUrl(item, format);
           navigator.clipboard.writeText(url).then(() => this.persist('已复制 ' + (format ? format.label : 'Clash') + ' 订阅链接')).catch(() => this.persist(url));
         },
+        copyDefault(item) {
+          this.copyUrl(item, { label: 'Clash', target: 'clash' });
+        },
         // Build subscription URL for a given client format. Most clients are
         // Clash/Surge variants and rely on the client UA; we just hint format + ua.
         buildSubscriptionUrl(item, format) {
@@ -374,18 +376,18 @@ export const SubscriptionManager = () => {
                 </div>
                 <div class="flex flex-wrap gap-1.5 shrink-0 relative">
                   <div class="inline-flex" style="position: relative;">
-                    <button type="button" class="mm-btn mm-btn-primary mm-btn-sm rounded-r-none" x-on:click="copyUrl(item, copyFormats.find(f => f.key === 'clash'))">
+                    <button type="button" class="mm-btn mm-btn-primary mm-btn-sm rounded-r-none" x-on:click="copyDefault(item)">
                       <i class="fas fa-copy text-xs"></i> 复制
                     </button>
                     <button type="button" class="mm-btn mm-btn-primary mm-btn-sm rounded-l-none px-2" style="margin-left: -1px;" x-on:click="toggleFormatMenu(item)" aria-label="选择格式">
                       <i class="fas" x-bind:class="openFormatId === item.id ? 'fa-caret-up' : 'fa-caret-down'"></i>
                     </button>
-                    <div class="absolute right-0 top-full mt-1 z-50 w-44 bg-white dark:bg-zinc-900 border border-[var(--border)] rounded-lg shadow-lg max-h-72 overflow-auto" x-show="openFormatId === item.id" x-cloak x-transition>
-                      <template x-for="fmt in copyFormats" x-bind:key="fmt.key">
-                        <button type="button" class="w-full text-left px-3 py-2 text-sm hover:bg-[var(--primary)]/10 dark:hover:bg-white/5 text-gray-700 dark:text-gray-300" x-on:click="copyUrl(item, fmt); openFormatId = null">
-                          <span x-text="fmt.label"></span>
+                    <div class="absolute right-0 top-full mt-1 z-50 w-44 bg-white dark:bg-zinc-900 border border-[var(--border)] rounded-lg shadow-lg max-h-72 overflow-auto" x-show="openFormatId === item.id" x-cloak>
+                      {copyFormats.map((fmt) => (
+                        <button type="button" class="w-full text-left px-3 py-2 text-sm hover:bg-[var(--primary)]/10 dark:hover:bg-white/5 text-gray-700 dark:text-gray-300" x-on:click={`copyUrl(item, ${JSON.stringify(fmt)}); openFormatId = null`}>
+                          {fmt.label}
                         </button>
-                      </template>
+                      ))}
                     </div>
                   </div>
                   <button type="button" class="mm-btn mm-btn-outline mm-btn-sm" x-on:click="startEdit(item)">编辑</button>
