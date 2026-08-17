@@ -35,6 +35,20 @@ export const SubscriptionManager = () => {
         nodeFilter: '',
         formatModal: false,
         formatItem: null, // item whose format selector is open
+        formats: [
+          { key: 'auto', label: 'Auto', target: 'base64' },
+          { key: 'clash', label: 'Clash', target: 'clash' },
+          { key: 'stash', label: 'Stash', target: 'clash', ua: 'stash/2.x' },
+          { key: 'shadowrocket', label: 'Shadowrocket', target: 'clash', ua: 'shadowrocket' },
+          { key: 'surfboard', label: 'Surfboard', target: 'surge', ua: 'surfboard' },
+          { key: 'surge', label: 'Surge', target: 'surge', ua: 'surge' },
+          { key: 'surge-mac', label: 'Surge Mac', target: 'surge', ua: 'surge-mac' },
+          { key: 'clash-to-surge', label: 'Clash→Surge', target: 'surge' },
+          { key: 'loon', label: 'Loon', target: 'clash', ua: 'loon' },
+          { key: 'clash-to-loon', label: 'Clash→Loon', target: 'clash', ua: 'loon' },
+          { key: 'clash-to-loon-kelee', label: 'Clash→Loon(kelee)', target: 'clash', ua: 'loon' },
+          { key: 'quantumultx', label: 'QuantumultX', target: 'base64', ua: 'quantumult%20x' }
+        ],
 
         token() {
           try { return Alpine.store('auth').token || localStorage.getItem('sublink_auth_token') || ''; }
@@ -216,26 +230,51 @@ export const SubscriptionManager = () => {
           }
         },
         copyUrl(item, format) {
+          if (!item) return;
           const url = this.buildSubscriptionUrl(item, format);
-          navigator.clipboard.writeText(url).then(() => this.persist('已复制 ' + (format ? format.label : 'Clash') + ' 订阅链接')).catch(() => this.persist(url));
+          const label = format ? format.label : 'Clash';
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(url).then(() => this.persist('已复制 ' + label + ' 订阅链接')).catch(() => this.persist(url));
+          } else {
+            this.persist(url);
+          }
         },
         copyDefault(item) {
-          this.copyUrl(item, { label: 'Clash', target: 'clash' });
+          const clashFmt = this.formats.find((f) => f.key === 'clash') || { key: 'clash', label: 'Clash', target: 'clash' };
+          this.copyUrl(item, clashFmt);
+        },
+        copyByFormatKey(item, key) {
+          const fmt = this.formats.find((f) => f.key === key) || { key: 'clash', label: 'Clash', target: 'clash' };
+          this.copyUrl(item, fmt);
+          this.closeFormatModal();
         },
         // Build subscription URL for a given client format. Most clients are
         // Clash/Surge variants and rely on the client UA; we just hint format + ua.
         buildSubscriptionUrl(item, format) {
-          const base = item.url || (window.location.origin + '/subscribe/' + item.slug);
-          if (!format || format.key === 'auto') return base + '?format=base64';
-          const u = new URL(base);
+          if (!item) return '';
+          const base = item.url || (window.location.origin + '/subscribe/' + encodeURIComponent(item.slug || ''));
+          const u = new URL(base, window.location.origin);
+          if (!format || format.key === 'auto') {
+            u.searchParams.set('format', 'base64');
+            u.searchParams.delete('ua');
+            return u.toString();
+          }
           const target = format.target || 'clash';
           u.searchParams.set('format', target);
-          if (format.ua) u.searchParams.set('ua', format.ua);
+          if (format.ua) {
+            u.searchParams.set('ua', decodeURIComponent(format.ua));
+          } else {
+            u.searchParams.delete('ua');
+          }
           return u.toString();
         },
         openFormatModal(item) {
           this.formatItem = item;
           this.formatModal = true;
+        },
+        closeFormatModal() {
+          this.formatModal = false;
+          this.formatItem = null;
         }
       };
     }
@@ -391,18 +430,54 @@ export const SubscriptionManager = () => {
               </div>
               </div>
             </template>
-              {/* Format selector modal: centered fixed overlay, immune to stacking context */}
-              <div x-show="formatModal" x-cloak class="fixed inset-0 z-[9999] flex items-center justify-center">
-                <div class="absolute inset-0 bg-black/40" x-on:click="formatModal = false"></div>
-                <div class="relative bg-white dark:bg-zinc-900 border border-[var(--border)] rounded-xl shadow-2xl w-64 max-w-[calc(100vw-2rem)] max-h-[80vh] overflow-auto p-2">
-                  {copyFormats.map((fmt) => (
-                    <button type="button" class="w-full text-left px-3 py-2.5 text-sm rounded-lg hover:bg-[var(--primary)]/10 dark:hover:bg-white/5 text-gray-700 dark:text-gray-300" data-fmt={JSON.stringify(fmt)} x-on:click="copyUrl(formatItem, JSON.parse($el.dataset.fmt)); formatModal = false">
-                      {fmt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
           </div>
+        </div>
+      </div>
+
+      {/* Format selector modal: centered fixed overlay, outside pixel-cards to avoid stacking context traps */}
+      <div
+        x-show="formatModal"
+        x-cloak
+        class="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+        x-on:keydown.escape.window="closeFormatModal()"
+      >
+        <div
+          class="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+          x-on:click="closeFormatModal()"
+        ></div>
+        <div
+          class="relative z-10 w-full max-w-sm border-2 border-[var(--border)] bg-[var(--card)] text-[var(--card-foreground)] shadow-2xl p-4 space-y-3"
+          x-on:click.stop
+        >
+          <div class="flex items-center justify-between border-b border-[var(--border)] pb-2">
+            <div class="font-semibold text-sm flex items-center gap-1.5">
+              <i class="fas fa-link text-xs text-[var(--primary)]"></i>
+              <span>选择复制格式</span>
+              <span class="text-xs text-muted font-normal" x-show="formatItem" x-text="'(' + (formatItem?.name || '') + ')'"></span>
+            </div>
+            <button
+              type="button"
+              class="text-muted-foreground hover:text-[var(--foreground)] p-1 text-sm transition-colors"
+              x-on:click="closeFormatModal()"
+              aria-label="关闭"
+            >
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+
+          <div class="grid grid-cols-2 gap-1.5 max-h-[60vh] overflow-y-auto pr-0.5">
+            {copyFormats.map((fmt) => (
+              <button
+                type="button"
+                class="flex items-center justify-between px-2.5 py-2 text-xs font-medium border border-[var(--border)] hover:border-[var(--primary)] hover:bg-[color-mix(in_srgb,var(--primary)_15%,transparent)] transition-all text-left group"
+                x-on:click={`copyByFormatKey(formatItem, '${fmt.key}')`}
+              >
+                <span class="truncate">{fmt.label}</span>
+                <i class="fas fa-copy text-[10px] opacity-0 group-hover:opacity-100 text-[var(--primary)] transition-opacity"></i>
+              </button>
+            ))}
+          </div>
+          <p class="text-[11px] text-muted text-center pt-1">点击格式即可复制对应订阅链接</p>
         </div>
       </div>
 
@@ -410,3 +485,4 @@ export const SubscriptionManager = () => {
     </div>
   );
 };
+
