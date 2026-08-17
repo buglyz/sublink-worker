@@ -921,8 +921,6 @@ export const NodeLibrary = (props) => {
           </div>
         </div>
       </div>
-        </div>
-      </div>
 
       <script dangerouslySetInnerHTML={{ __html: scriptContent }} />
     </div>
