@@ -364,7 +364,7 @@ export const SubscriptionManager = () => {
           </template>
           <div class="divide-y divide-[var(--border)]">
             <template x-for="item in filteredItems" x-bind:key="item.id">
-              <div class="py-4 flex flex-col lg:flex-row lg:items-center gap-3">
+              <div class="py-4 flex flex-col lg:flex-row lg:items-center gap-3 relative" x-bind:class="openFormatId === item.id ? 'z-[90]' : ''">
                 <div class="min-w-0 flex-1 space-y-1">
                   <div class="flex flex-wrap items-center gap-2">
                     <span class="font-semibold" x-text="item.name"></span>
@@ -382,7 +382,7 @@ export const SubscriptionManager = () => {
                     <button type="button" class="mm-btn mm-btn-primary mm-btn-sm rounded-l-none px-2" style="margin-left: -1px;" x-on:click="toggleFormatMenu(item)" aria-label="选择格式">
                       <i class="fas" x-bind:class="openFormatId === item.id ? 'fa-caret-up' : 'fa-caret-down'"></i>
                     </button>
-                    <div class="absolute right-0 top-full mt-1 z-50 w-44 bg-white dark:bg-zinc-900 border border-[var(--border)] rounded-lg shadow-lg max-h-72 overflow-auto" x-show="openFormatId === item.id" x-cloak>
+                    <div class="absolute right-0 top-full mt-2 z-[100] w-44 bg-white dark:bg-zinc-900 border border-[var(--border)] rounded-lg shadow-xl max-h-72 overflow-auto" x-show="openFormatId === item.id" x-cloak>
                       {copyFormats.map((fmt) => (
                         <button type="button" class="w-full text-left px-3 py-2 text-sm hover:bg-[var(--primary)]/10 dark:hover:bg-white/5 text-gray-700 dark:text-gray-300" x-on:click={`copyUrl(item, ${JSON.stringify(fmt)}); openFormatId = null`}>
                           {fmt.label}
